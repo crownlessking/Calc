@@ -14,6 +14,7 @@ namespace Calc\Parser;
 
 use Calc\K;
 use Calc\RX;
+use Calc\Sheet;
 use Calc\Symbol\Enclosure;
 use Calc\Symbol\Term;
 use Calc\Symbol\Factor;
@@ -116,6 +117,7 @@ trait FactorParserTrait
             switch ($ft) {
             case K::ENCLOSURE:
                 $factor = new Enclosure($str);
+                $factor->setEnclosureClass(K::FACTOR);
                 break;
             default:
                 $factor = new Factor($str);
@@ -157,10 +159,11 @@ trait FactorParserTrait
      */
     private static function _getFactorSignature(Factor $factor)
     {
-        $powers = $factor->getPowers();
-        if ($powers) {
+        $powerIndexes = $factor->getPowerIndexes();
+        if ($powerIndexes) {
             $signatures = [];
-            foreach ($powers as $p) {
+            foreach ($powerIndexes as $i) {
+                $p = Sheet::select($i);
                 $signatures[] = $p->getSignature();
             }
             $signature = implode('^', $signatures);
@@ -174,16 +177,16 @@ trait FactorParserTrait
      * Set inner values for factor object.
      *
      * @param \Calc\Symbol\Factor $factor factor object.
-     * @param \Calc\Symbol\Power  $powers power object.
-     * @param \Calc\Symbol\Term   $parent parent object which is a term.
+     * @param \Calc\Symbol\Power  $powerIndexes power object.
+     * @param \Calc\Symbol\Term   $parentIndex parent object which is a term.
      *
      * @return void
      */
-    private static function _initializeFactor(Factor &$factor, $powers, $parent)
+    private static function _initializeFactor(Factor &$factor, $powerIndexes, $parentIndex)
     {
-        $factor->setParent($parent);
-        if (isset($powers)) {
-            $factor->setPowers($powers);
+        $factor->setParentIndex($parentIndex);
+        if (isset($powerIndexes)) {
+            $factor->setPowerIndexes($powerIndexes);
         }
         $signature = self::_getFactorSignature($factor);
         $factor->setSignature($signature);
@@ -255,17 +258,7 @@ trait FactorParserTrait
         foreach ($tokens as $str) {
             $factor = self::_newFactor($str);
             self::_initializeFactorByClass($factor, $term);
-
-            self::$analysis['factors'][self::$id] = [
-                'value' => (string) $factor,
-                'type' => K::getDesc($factor->getType()),
-                'factor_type' => K::getDesc($factor->getFactorType()),
-                'tag' => $factor->getTag(),
-                'signature' => $factor->getSignature()
-            ];
-
-            $factors[self::$id] = $factor;
-            self::$id++;
+            $factors[] = Sheet::insert($factor);
         }
 
         return $factors;

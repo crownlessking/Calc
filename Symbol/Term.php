@@ -25,7 +25,8 @@ use Calc\K;
  */
 class Term extends Symbol
 {
-    protected $factors;
+
+    protected $factorIndexes;
 
     /**
      * Get an array of factors.
@@ -35,9 +36,9 @@ class Term extends Symbol
      *
      * @return array
      */
-    public function getFactors()
+    public function getFactorIndexes()
     {
-        return $this->factors;
+        return $this->factorIndexes;
     }
 
     /**
@@ -49,13 +50,14 @@ class Term extends Symbol
     {
         if (isset($this->simplifiedExp)) {
             return $this->simplifiedExp;
-        } else if (isset($this->factors)) {
+        } else if (isset($this->factorIndexes)) {
             $simplifiedExp = '';
-            foreach ($this->factors as $f) {
-                if ($f->type === K::FRACTION || empty($simplifiedExp)) {
-                    $simplifiedExp .= $f->getSimplifiedExp();
+            foreach ($this->factorIndexes as $i) {
+                $factor = \Calc\Sheet::select($i);
+                if ($factor->type === K::FRACTION || empty($simplifiedExp)) {
+                    $simplifiedExp .= $factor->getSimplifiedExp();
                 } else {
-                    $simplifiedExp .= '*' . $f->getSimplifiedExp();
+                    $simplifiedExp .= '*' . $factor->getSimplifiedExp();
                 }
             }
             $this->simplifiedExp = $simplifiedExp;
@@ -69,9 +71,9 @@ class Term extends Symbol
      *
      * @return void
      */
-    public function setFactors(array $factors)
+    public function setFactorIndexes(array $factors)
     {
-        $this->factors = $factors;
+        $this->factorIndexes = $factors;
     }
 
     public function setTokens(array $tokens)

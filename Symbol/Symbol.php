@@ -50,11 +50,18 @@ abstract class Symbol
     protected $tokens;
 
     /**
+     * Index of current object within the data structure array.
+     *
+     * @var integer
+     */
+    protected $index;
+
+    /**
      * Parent object.
      *
      * @var Symbol
      */
-    protected $parent;
+    protected $parentIndex;
 
     /**
      *
@@ -112,7 +119,7 @@ abstract class Symbol
      *
      * @var string
      */
-    protected $tagSignature;
+    //protected $tagSignature;
 
     /**
      * Whether the symbol is a negative number or not.
@@ -147,9 +154,9 @@ abstract class Symbol
      *
      * @return object
      */
-    public function getParent()
+    public function getParentIndex()
     {
-        return $this->parent;
+        return $this->parentIndex;
     }
 
     /**
@@ -183,6 +190,16 @@ abstract class Symbol
     public function getStatus()
     {
         return $this->status;
+    }
+
+    /**
+     * Get index
+     *
+     * @return integer
+     */
+    public function getIndex()
+    {
+        return $this->index;
     }
 
     /**
@@ -251,16 +268,11 @@ abstract class Symbol
     /**
      * Set a reference to parent object.
      *
-     * @param object $parent parent object
+     * @param object $index parent object
      */
-    public function setParent($parent)
+    public function setParentIndex($index)
     {
-        if (!isset($this->parent)) {
-            $this->parent = & $parent;
-            
-        } else {
-            throw new \BadMethodCallException('Parent\'s value is already set.');
-        }
+        $this->parentIndex = & $index;
     }
 
     /**
@@ -304,6 +316,11 @@ abstract class Symbol
         $this->signature = $signature;
     }
 
+    public function setIndex($index)
+    {
+        $this->index = $index;
+    }
+ 
     /**
      * Handle Symbol objects casting to string.
      *

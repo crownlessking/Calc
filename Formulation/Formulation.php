@@ -13,7 +13,7 @@
 namespace Calc\Formulation;
 
 use Calc\D;
-use Calc\Parser\Parser;
+use Calc\Parser\ParserTrait;
 
 /**
  * 
@@ -25,6 +25,8 @@ use Calc\Parser\Parser;
  */
 class Formulation
 {
+    use ParserTrait;
+
     /**
      * Helper function for _extractGetVal().
      * 
@@ -66,10 +68,10 @@ class Formulation
             $char = $expChars[$j];
             switch ($char) {
             case '(':
-                $j = Parser::findMatching($expChars, $j); // skip parentheses
+                $j = self::findMatching($expChars, $j); // skip parentheses
                 break;
             case '[':
-                $j = Parser::findMatching($expChars, $j, '['); // skip brackets
+                $j = self::findMatching($expChars, $j, '['); // skip brackets
                 break;
             default:
                 return self::_getArrayVal($exp, $offset, $char, $j);

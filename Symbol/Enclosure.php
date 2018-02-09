@@ -62,6 +62,15 @@ class Enclosure extends Expression
     protected $enclosureType;
 
     /**
+     * Enclosure class
+     *
+     * e.g. term, factor, or power
+     *
+     * @var integer
+     */
+    protected $enclosureClass;
+
+    /**
      * The type of current factor.
      *
      * In case the current object's type is "denominator", this variable would,
@@ -96,6 +105,18 @@ class Enclosure extends Expression
             return K::BRACKETS;
         }
         throw new \UnexpectedValueException('Enclosure "type" resolution failed.');
+    }
+
+    /**
+     * Get enclosure class.
+     *
+     * e.g. term, factor, or power.
+     *
+     * @return integer
+     */
+    public function getEnclosureClass()
+    {
+        return $this->enclosureClass;
     }
 
     /**
@@ -201,6 +222,18 @@ class Enclosure extends Expression
     public function setFactorType(int $type)
     {
         $this->factorType = $type;
+    }
+
+    /**
+     * Set enclosure's class.
+     *
+     * @param integer $class represents the class
+     *
+     * @return void
+     */
+    public function setEnclosureClass($class)
+    {
+        $this->enclosureClass = $class;
     }
 
     /**

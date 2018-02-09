@@ -12,6 +12,8 @@
 
 namespace Calc\Symbol;
 
+use Calc\Sheet;
+
 /**
  * Expression class
  *
@@ -23,22 +25,21 @@ namespace Calc\Symbol;
  */
 class Expression extends Symbol
 {
-
     /**
      * Array of \Calc\Symbol\Term objects.
      *
      * @var array
      */
-    protected $terms;
+    protected $termIndexes;
 
     /**
      * Get an array of \Calc\Symbol\Term object.
      *
      * @return array
      */
-    public function getTerms()
+    public function getTermIndexes()
     {
-        return $this->terms;
+        return $this->termIndexes;
     }
 
     /**
@@ -50,9 +51,10 @@ class Expression extends Symbol
     {
         if (isset($this->simplifiedExp)) {
             return $this->simplifiedExp;
-        } else if (isset($this->terms)) {
+        } else if (isset($this->termIndexes)) {
             $simplifiedExp = '';
-            foreach ($this->terms as $t) {
+            foreach ($this->termIndexes as $i) {
+                $t = Sheet::select($i);
                 if ($t->isNegative() || empty($simplifiedExp)) {
                     $simplifiedExp .= $t->getSimplifiedExp();
                 } else {
@@ -70,11 +72,11 @@ class Expression extends Symbol
      *
      * This array should always contain at least one term.
      *
-     * @param array $terms
+     * @param array $termIndexes
      */
-    public function setTerms(array $terms)
+    public function setTermIndexes(array $termIndexes)
     {
-        $this->terms = $terms;
+        $this->termIndexes = $termIndexes;
     }
 
     /**

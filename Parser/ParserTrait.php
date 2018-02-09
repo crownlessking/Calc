@@ -1,90 +1,12 @@
 <?php
 
-/**
- * PHP version 7.x
- *
- * @category Math
- * @package  Calc
- * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
- * @link     http://www.crownlessking.com
- */
-
 namespace Calc\Parser;
 
 use Calc\RX;
+use Calc\Sheet;
 
-/**
- * Default data structure for the parser as a trait.
- *
- * @category Math
- * @package  Calc
- * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
- * @link     http://www.crownlessking.com
- */
-trait ParserDataTrait
+trait ParserTrait
 {
-    /**
-     * Contain all the analysis data for the current expression.
-     *
-     * @var array
-     */
-    protected static $analysis;
-
-    /**
-     * Next identification number to be assigned to a symbol.
-     *
-     * Think of it as an id given to each individual elements in the expression.
-     *
-     * @var integer
-     */
-    protected static $id;
-
-    /**
-     * Indicates whether the parser is in debugging mode or not.
-     *
-     * @var bool
-     */
-    protected static $debugging = false;
-
-    /**
-     * Toggle the Parser's debugging mode.
-     *
-     * @param boolean $switch debug true or false.
-     *
-     * @return void
-     */
-    public static function debug(bool $switch)
-    {
-        self::$debugging = $switch;
-    }
-
-    /**
-     * Stack the debugging messages into an array so they can be displayed in
-     * the returned JSON.
-     *
-     * @param string $message arbitrary debugging message
-     *
-     * @return void
-     */
-    public static function m(string $message)
-    {
-        if (self::$debugging) {
-            self::$analysis['debug'][] = $message;
-        }
-    }
-
-    /**
-     * Get the analysis data.
-     *
-     * @return array
-     */
-    public static function getAnalysisData()
-    {
-        return self::$analysis;
-    }
-
     /**
      * Finds the matching "closing" parenthesis or bracket.
      *
@@ -212,32 +134,27 @@ trait ParserDataTrait
             $m = 'The signature needs to be set first to get the tag.';
             throw new \LogicException($m);
         }
+        $tag = Sheet::getTag($sig);
 
-        // if expression starts witha negative sign or a forward slash
-        // $e = (preg_match('/^[-\/]/', $sig) === 1) ? substr($sig, 1) : $sig;
-        $e = $sig;
-
-        // if exact same expression was already found.
-        if (array_key_exists($e, self::$analysis['tags'])) {
-            $tag = self::$analysis['tags'][$e];
-            return $tag;
-        }
-
-        // otherwise give this expression an new tag.
-        $tag = Parser::ALPHA[self::$analysis['next_tag']];
-        self::$analysis['tags'][$e] = $tag;
-        self::$analysis['next_tag']++;
         return $tag;
     }
 
-    private static function _initializeEnclosure(& $obj, $parentObj)
+    /**
+     * 
+     *
+     * @param object  $obj         Symbol object
+     * @param integer $parentIndex Parent object index in the data structure.
+     *
+     * @return void
+     */
+    private static function _initializeEnclosure(& $obj, $parentIndex)
     {
-        $obj->setParent($parentObj);
+        $obj->setParentIndex($parentIndex);
 
         $content = $obj->getContent();
         $exp = self::_analyze($content, $obj);
-        $terms = $exp->getTerms();
-        $obj->setTerms($terms);
+        $terms = $exp->getTermIndexes();
+        $obj->setTermIndexes($terms);
 
         $signature = $exp->getSignature();
         $obj->setSignature($signature);

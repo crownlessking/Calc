@@ -13,6 +13,7 @@
 namespace Calc\Parser;
 
 use Calc\K;
+use Calc\Sheet;
 use Calc\Symbol\Expression;
 use Calc\Symbol\Enclosure;
 
@@ -27,29 +28,17 @@ use Calc\Symbol\Enclosure;
  */
 class Parser
 {
-
-    use ParserDataTrait;
+    use ParserTrait;
     use PowerParserTrait;
     use FactorParserTrait;
     use TermParserTrait;
 
-    /**
-     * Contains letter tag to be assigned to symbol for formulation purpose.
-     *
-     * @var array
-     */
-    const ALPHA = [
-        'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r',
-        's','t','u','v','w','x','y','z',
-        'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R',
-        'S','T','U','V','W','X','Y','Z'
-    ];
-
     private static function _getExpressionSignature(Expression $exp)
     {
-        $terms = $exp->getTerms();
-        if ($terms) {
-            foreach ($terms as $t) {
+        $termIndexes = $exp->getTermIndexes();
+        if ($termIndexes) {
+            foreach ($termIndexes as $i) {
+                $t = Sheet::select($i);
                 $signatures[] = $t->getSignature();
             }
             $sortedSignatures = K::quickSort($signatures);
@@ -64,23 +53,22 @@ class Parser
      * Get an expression object.
      *
      * @param string                 $str    string expression
-     * @param \Calc\Symbol\Enclosure $parent enclosure object.
+     * @param \Calc\Symbol\Enclosure $parentIndex enclosure object.
      *
      * @return \Calc\Symbol\Expression
      */
-    private static function _analyze(string $str, Enclosure $parent = null)
+    private static function _analyze(string $str, Enclosure $parentIndex = null)
     {
         $exp = new Expression($str);
-        if ($parent) {
-            $exp->setParent($parent);
+        if ($parentIndex) {
+            $exp->setParentIndex($parentIndex);
         }
         $tokens = self::_getTermTokens($str);
         $exp->setTokens($tokens);
         $terms = self::_getTerms($tokens, $exp);
-        $exp->setTerms($terms);
+        $exp->setTermIndexes($terms);
         $signature = self::_getExpressionSignature($exp);
         $exp->setSignature($signature);
-        self::$analysis['terms'] += $terms;
 
         return $exp;
     }
@@ -94,25 +82,18 @@ class Parser
      */
     public static function newAnalysis(string $expression)
     {
-        self::$analysis = [
-            'expression' => $expression,
-            'terms' => [],
-            'factors' => [],
-            'powers'  => [],
-            'tags' => [],
-            'next_tag' => 0
-        ];
-
-        if (self::$debugging) {
-            self::$analysis['debug'] = [];
-        }
-
-        self::$id = 0;
         $expObj = self::_analyze($expression);
-        self::$analysis['signature'] = $expObj->getSignature();
-        self::$analysis['simplified_exp'] = $expObj->getSimplifiedExp();
 
         return $expObj;
     }
 
+    /**
+     * Get analysis data.
+     *
+     * @return array
+     */
+    public static function getAnalysisData()
+    {
+        return Sheet::getAnalysisData();
+    }
 }

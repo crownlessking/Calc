@@ -14,6 +14,7 @@ namespace Calc\Parser;
 
 use Calc\K;
 use Calc\RX;
+use Calc\Sheet;
 use Calc\Symbol\Enclosure;
 use Calc\Symbol\Factor;
 use Calc\Symbol\Power;
@@ -105,6 +106,7 @@ trait PowerParserTrait
         switch ($type) {
         case K::ENCLOSURE:
             $power = new Enclosure($str);
+            $power->setEnclosureClass(K::POWER);
             break;
         default:
             $power = new Power($str);
@@ -114,8 +116,8 @@ trait PowerParserTrait
     }
 
     /**
-     * 
-     * @param Calc\Symbol\Power $power 
+     *
+     * @param Calc\Symbol\Power $power
      *
      * @return string
      */
@@ -131,6 +133,34 @@ trait PowerParserTrait
     }
 
     /**
+     * Set the power type.
+     *
+     * E.g. for "5^3"
+     *      the power type of "5" would be "base".
+     *      the power type of "3" would be "exponent".
+     *
+     * @param \Calc\Symbol\Power $power  object representing a raise-to-power
+     *                                   operand.
+     * @param array              $tokens array of string tokens
+     *
+     * @return void
+     */
+    private static function _setPowerType(& $power, $tokens)
+    {
+        $fTokens = array_flip($tokens);
+        $exp = (string) $power;
+        $index = $fTokens[$exp];
+
+        if ($index === 0) {
+            $power->setPowerType(K::BASE);
+        } else if ($index === count($fTokens) - 1) {
+            $power->setPowerType(K::EXPONENT);
+        } else {
+            $power->setPowerType(K::B_AND_E);
+        }
+    }
+
+    /**
      * Set inner values of power object.
      *
      * @param \Calc\Symbol\Power  $power  power object.
@@ -140,56 +170,13 @@ trait PowerParserTrait
      */
     private static function _initializePower(Power &$power, Factor $parentObj)
     {
-        $power->setParent($parentObj);
+        $index = $parentObj->getParentIndex();
+        $power->setParentIndex($index);
         $signature = self::_getPowerSignature($power);
         $power->setSignature($signature);
-        $power->setTag(self::_getTag($power));
-    }
-
-    /**
-     * Set the power type of each power objects.
-     *
-     * E.g. whether the power object is "base" or an "exponent" or "b&e" both.
-     *
-     * @param array $powers array containing the analysis of exponent elements of
-     *                      the currently analyzed expression.
-     *
-     * @return void
-     */
-    private static function _setPowerTypes(array & $powers)
-    {
-        $length = count($powers);
-        $j = 0;
-        foreach ($powers as & $power) {
-            if ($j === 0) {
-                $power->setPowerType(K::BASE);
-            } else if ($j === $length -1) {
-                $power->setPowerType(K::EXPONENT);
-            } else {
-                $power->setPowerType(K::B_AND_E);
-            }
-            $j++;
-        }
-    }
-
-    /**
-     * Prints out the power objects types.
-     *
-     * This function helps visualize whether a power object is a base or an
-     * exponent.
-     *
-     * @param array $powerObjects power objects.
-     *
-     * @return void
-     */
-    private static function _debugPrintPowerTypes($powerObjects)
-    {
-        if (self::$debugging) {
-            foreach ($powerObjects as $p) {
-                $desc = K::getDesc($p->getPowerType());
-                self::m((string) $p . ' = ' . $desc);
-            }
-        }
+        $tag = self::_getTag($power);
+        $power->setTag($tag);
+        $tokens = $parentObj->getTokens();
     }
 
     /**
@@ -215,7 +202,7 @@ trait PowerParserTrait
     }
 
     /**
-     * Get power objects.
+     * Get power indexes.
      *
      * @param \Calc\Symbol\Factor $factor factor object.
      *
@@ -231,18 +218,12 @@ trait PowerParserTrait
         foreach ($tokens as $str) {
             $power = self::_newPower($str);
             self::_initializePowerByClass($power, $factor);
-
-            self::$analysis['powers'][self::$id] = [
-                'value' => (string) $power,
-                'type' => K::getDesc($power->getType()),
-                'tag' => $power->getTag()
-            ];
-
-            $powers[self::$id] = $power;
-            self::$id++;
+            $id = Sheet::insert($power);
+            $powers[] = $id;
+            $power->setIndex($id);
+            self::_setPowerType($power, $tokens);
         }
-        self::_setPowerTypes($powers);
-        self::_debugPrintPowerTypes($powers);
+
         return $powers;
     }
 

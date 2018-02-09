@@ -89,7 +89,6 @@ class Calc
     public static function debug($debugging)
     {
         self::$_debugging = $debugging;
-        Parser::debug($debugging);
     }
 
     /**
@@ -162,7 +161,15 @@ class Calc
      */
     public static function getAnalysis()
     {
-        return Parser::getAnalysisData();
+        $parser = Parser::getAnalysisData();
+        $analysis = [
+            "expression" => self::$_expression,
+            "objects"    => D::analysisDump($parser['steps']),
+            "tags" => $parser["tags"],
+            "tags_by_signature" => $parser["tags_by_signature"],
+            "next_tag" => Sheet::getNextTagIndex()
+        ];
+        return $analysis;
     }
 
 }

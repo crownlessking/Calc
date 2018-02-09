@@ -14,6 +14,7 @@ namespace Calc\Parser;
 
 use Calc\K;
 use Calc\RX;
+use Calc\Sheet;
 use Calc\Symbol\Expression;
 use Calc\Symbol\Enclosure;
 use Calc\Symbol\Term;
@@ -138,6 +139,7 @@ trait TermParserTrait
         switch ($type) {
         case K::ENCLOSURE:
             $term = new Enclosure($element);
+            $term->setEnclosureClass(K::TERM);
             break;
         default:
             $term = new Term($element);
@@ -148,9 +150,10 @@ trait TermParserTrait
 
     private static function _getTermSignature(Term $term)
     {
-        $factors = $term->getFactors();
-        if ($factors) {
-            foreach ($factors as $f) {
+        $factorIndexes = $term->getFactorIndexes();
+        if ($factorIndexes) {
+            foreach ($factorIndexes as $i) {
+                $f = Sheet::select($i);
                 $s = $f->getSignature();
                 $tmp[] = $s;
             }
@@ -165,17 +168,17 @@ trait TermParserTrait
     /**
      * Set inner values for term object.
      *
-     * @param \Calc\Symbol\Term       $term    term object.
-     * @param array                   $factors array of factor objects.
-     * @param \Calc\Symbol\Expression $parent  expression object.
+     * @param \Calc\Symbol\Term $term    term object.
+     * @param array             $factorIndexes array of factor objects.
+     * @param integer           $parentIndex  expression object.
      *
      * @return void
      */
-    private static function _initializeTerm(& $term, $factors, $parent)
+    private static function _initializeTerm(& $term, $factorIndexes, $parentIndex)
     {
-        $term->setParent($parent);
-        if (isset($factors)) {
-            $term->setFactors($factors);
+        $term->setParentIndex($parentIndex);
+        if (isset($factorIndexes)) {
+            $term->setFactorIndexes($factorIndexes);
         }
         $signature = self::_getTermSignature($term);
         $term->setSignature($signature);
@@ -242,18 +245,8 @@ trait TermParserTrait
         foreach ($tokens as $str) {
             $term = self::_newTerm($str);
             self::_initializeTermByClass($term, $parent);
-
-            self::$analysis['terms'][self::$id] = [
-                'value' => (string) $term,
-                'type' => K::getDesc($term->getType()),
-                'tag' => $term->getTag(),
-                'signature' => $term->getSignature()
-            ];
-
-            $terms[self::$id] = $term;
-            self::$id++;
+            $terms[] = Sheet::insert($term);
         }
-
         return $terms;
     }
 

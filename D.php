@@ -40,21 +40,86 @@ class DebuggingException extends \Exception
 
 class D
 {
-    public static function analysisDump(Expression $exp)
+
+    private static function _analysisDumpTerm(& $data, $obj)
     {
-        $analysis = [
-            'expression' => (string) $exp,
-            'signature' => null,
-            'terms' => [],
-            'factors' => [],
-            'powers' => [],
-            
-            // each key will be a tag leading to an array of IDs.
-            // each ID is a unique identifier that leads 
-            'tags' => [],
-            'tags_by_signature' => []
+        $data['terms'] = isset($data['terms'])
+            ? $data['terms']
+            : [];
+        $data['terms'][] = [
+            'value'     => (string) $obj,
+            'type'      => K::getDesc($obj->getType()),
+            'tag'       => $obj->getTag(),
+            'signature' => $obj->getSignature()
         ];
-        
+    }
+
+    private static function _analysisDumpFactor(& $data, $obj)
+    {
+        $data['factors'] = isset($data['factors'])
+            ? $data['factors']
+            : [];
+        $data['factors'][] = [
+            'value'       => (string) $obj,
+            'type'        => K::getDesc($obj->getType()),
+            'factor_type' => K::getDesc($obj->getFactorType()),
+            'tag'         => $obj->getTag(),
+            'signature'   => $obj->getSignature()
+        ];
+    }
+
+    private static function _analysisDumpPower(& $data, $obj)
+    {
+        $data['powers'] = isset($data['powers'])
+            ? $data['powers']
+            : [];
+        $data['powers'][] = [
+            'value'      => (string) $obj,
+            'type'       => K::getDesc($obj->getType()),
+            'power_type' => K::getDesc($obj->getPowerType()),
+            'tag'        => $obj->getTag(),
+            'signature'  => $obj->getSignature()
+        ];
+    }
+
+    private static function _analysisDumpEnclosure(& $data, $obj)
+    {
+        $enclosureClass = $obj->getEnclosureClass();
+        switch ($enclosureClass) {
+        case K::TERM:
+            self::_analysisDumpPower($data, $obj);
+            break;
+        case K::FACTOR:
+            self::_analysisDumpFactor($data, $obj);
+            break;
+        case K::POWER:
+            self::_analysisDumpPower($data, $obj);
+            break;
+        }
+    }
+
+    public static function analysisDump($steps, $index = 0)
+    {
+        $data = [];
+        $step = $steps[$index];
+        foreach ($step as $obj) {
+            $class = get_class($obj);
+            switch ($class) {
+            case 'Calc\\Symbol\\Term':
+                self::_analysisDumpTerm($data, $obj);
+                break;
+            case 'Calc\\Symbol\\Factor':
+                self::_analysisDumpFactor($data, $obj);
+                break;
+            case 'Calc\\Symbol\\Power':
+                self::_analysisDumpPower($data, $obj);
+                break;
+            case 'Calc\\Symbol\\Enclosure':
+                self::_analysisDumpEnclosure($data, $obj);
+                break;
+            }
+        }
+        return $data;
     }
 
     public static function expect($received, $expected)
@@ -64,4 +129,5 @@ class D
             throw new DebuggingException($m);
         }
     }
+
 }

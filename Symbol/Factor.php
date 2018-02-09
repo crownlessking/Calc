@@ -29,7 +29,7 @@ class Factor extends Symbol
      *
      * @var array
      */
-    protected $powers;
+    protected $powerIndexes;
 
     /**
      * The type of current factor.
@@ -44,15 +44,15 @@ class Factor extends Symbol
     protected $factorType;
 
     /**
-     * Get an array of power object.
+     * Get an array of the index locations of all child objects.
      *
-     * Note: Factors don't necessarily have powers so this array may be null.
+     * Note: Factors don't necessarily have children so, this array may be null.
      *
      * @return array
      */
-    public function getPowers()
+    public function getPowerIndexes()
     {
-        return $this->powers;
+        return $this->powerIndexes;
     }
 
     /**
@@ -74,9 +74,10 @@ class Factor extends Symbol
     {
         if (isset($this->simplifiedExp)) {
             return $this->simplifiedExp;
-        } else if (isset($this->powers)) {
+        } else if (isset($this->powerIndexes)) {
             $simplifiedExp = '';
-            foreach ($this->powers as $p) {
+            foreach ($this->powerIndexes as $i) {
+                $p = \Calc\Sheet::select($i);
                 if (empty($simplifiedExp)) {
                     $simplifiedExp .= $p->getSimplifiedExp();
                 } else {
@@ -92,11 +93,14 @@ class Factor extends Symbol
     /**
      * Set an array of power objects.
      *
-     * @param array $powers array of \Calc\Symbol\Power objects
+     * @param array $indexes array of integers which are the indexes of all
+     *                       child objects.
+     *
+     * @return void
      */
-    public function setPowers(array $powers)
+    public function setPowerIndexes(array $indexes)
     {
-        $this->powers = $powers;
+        $this->powerIndexes = $indexes;
     }
 
     /**
