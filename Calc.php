@@ -1,11 +1,7 @@
 <?php
 
 /**
- * PHP version 7.0
- *
- * -----------------------------------------------------------------------------
- * Calc Development
- * -----------------------------------------------------------------------------
+ * PHP version 7.x
  *
  * @category API
  * @package  Calc
@@ -134,22 +130,23 @@ class Calc
      */
     private static function _initialize($expression)
     {
-        self::$_originalExp = self::$_expression = $expression;
+        self::$_expression = self::$_originalExp = $expression;
+        self::_filterExpression();
     }
 
     /**
      * Get a new expression evaluation object.
      *
-     * @param string $expression expression to be evaluated
+     * @param string $expStr string expression.
      *
      * @return \Calc\Symbol\Expression
      */
-    public static function newEvaluation($expression)
+    public static function solve($expStr)
     {
-        self::_initialize($expression);
-        self::_filterExpression();
+        self::_initialize($expStr);
 
-        $exp = Parser::newAnalysis(self::$_expression);
+        $exp = new Symbol\Expression(self::$_expression);
+        $exp->setParentIndex(K::ROOT);
 
         return $exp;
     }
@@ -159,17 +156,19 @@ class Calc
      *
      * @return array
      */
-    public static function getAnalysis()
+    public static function getAnalysis($expression)
     {
-        $parser = Parser::getAnalysisData();
-        $analysis = [
+        self::_initialize($expression);
+        $exp = Parser::analyze(self::$_expression);
+        $data = Parser::getAnalysisData();
+        return [
             "expression" => self::$_expression,
-            "objects"    => D::analysisDump($parser['steps']),
-            "tags" => $parser["tags"],
-            "tags_by_signature" => $parser["tags_by_signature"],
-            "next_tag" => Sheet::getNextTagIndex()
+            "objects"    => D::analysisDump($data['steps']),
+            "tags" => $data["tags"],
+            "tags_by_signature" => $data["tags_by_signature"],
+            "next_tag" => \Calc\Math\Sheet::getNextTagIndex(),
+            'simplified_exp' => $exp->getSimplifiedExp()
         ];
-        return $analysis;
     }
 
 }

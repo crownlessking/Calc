@@ -4,7 +4,7 @@
  * PHP version 7.x
  *
  * @category Math
- * @package  Calc
+ * @package  Crownlessing/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
@@ -14,8 +14,8 @@ namespace Calc\Parser;
 
 use Calc\K;
 use Calc\RX;
-use Calc\Sheet;
-use Calc\Symbol\Enclosure;
+use Calc\Math\Sheet;
+use Calc\Symbol\FactorEnclosure;
 use Calc\Symbol\Term;
 use Calc\Symbol\Factor;
 
@@ -23,7 +23,7 @@ use Calc\Symbol\Factor;
  * Calc parser.
  *
  * @category Math
- * @package  Calc
+ * @package  Crownlessing/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
@@ -90,7 +90,7 @@ trait FactorParserTrait
             }
         }
         if (self::_isEnclosure($str)) {
-            return K::ENCLOSURE;
+            return K::FACTOR_ENCLOSURE;
         }
         return K::POWER;
     }
@@ -108,16 +108,15 @@ trait FactorParserTrait
     private static function _getFactorObject(string $str, int $type)
     {
         switch ($type) {
-        case K::ENCLOSURE:
-            $factor = new Enclosure($str);
+        case K::FACTOR_ENCLOSURE:
+            $factor = new FactorEnclosure($str);
             break;
         case K::FRACTION:
             $fstr = substr($str, 1);
             $ft = self::_identifyFactor($fstr);
             switch ($ft) {
-            case K::ENCLOSURE:
-                $factor = new Enclosure($str);
-                $factor->setEnclosureClass(K::FACTOR);
+            case K::FACTOR_ENCLOSURE:
+                $factor = new FactorEnclosure($str);
                 break;
             default:
                 $factor = new Factor($str);
@@ -160,7 +159,7 @@ trait FactorParserTrait
     private static function _getFactorSignature(Factor $factor)
     {
         $powerIndexes = $factor->getPowerIndexes();
-        if ($powerIndexes) {
+        if (!empty($powerIndexes)) {
             $signatures = [];
             foreach ($powerIndexes as $i) {
                 $p = Sheet::select($i);
@@ -168,100 +167,56 @@ trait FactorParserTrait
             }
             $signature = implode('^', $signatures);
             return $signature;
+        } else if (isset($powerIndexes)) {
+            $signature = self::_getSignature($factor);
+            return $signature;
         }
-        $signature = self::_getSignature($factor);
-        return $signature;
+        $m = 'The "factor" must be processed first. If it was, $powerIndexes'
+                . ' should at least be an empty array.';
+        throw new \LogicException($m);
+    }
+
+    /**
+     * Build factor object then save them it in the math sheet.
+     *
+     * The object is then returned.
+     *
+     * @param array $token  string representing a factor.
+     * @param Term  $parent parent object.
+     *
+     * @see \Calc\Math\Sheet
+     *
+     * @return Factor
+     */
+    private static function _saveFactor($token, Term $parent)
+    {
+        $factor = self::_newFactor($token);
+        $parentIndex = $parent->getIndex();
+        $factor->setParentIndex($parentIndex);
+        $index = Sheet::insert($factor);
+        $factor->setIndex($index);
+        Sheet::update($factor);
+
+        return $factor;
     }
 
     /**
      * Set inner values for factor object.
      *
-     * @param \Calc\Symbol\Factor $factor factor object.
-     * @param \Calc\Symbol\Power  $powerIndexes power object.
-     * @param \Calc\Symbol\Term   $parentIndex parent object which is a term.
+     * @param Factor             $factor       factor object.
+     * @param array              $tokens       array of token strings.
+     * @param \Calc\Symbol\Power $powerIndexes power object.
      *
      * @return void
      */
-    private static function _initializeFactor(Factor &$factor, $powerIndexes, $parentIndex)
+    private static function _setFactorData(Factor &$factor, array $tokens, array $powerIndexes)
     {
-        $factor->setParentIndex($parentIndex);
-        if (isset($powerIndexes)) {
-            $factor->setPowerIndexes($powerIndexes);
-        }
+        $factor->setTokens($tokens);
+        $factor->setPowerIndexes($powerIndexes);
         $signature = self::_getFactorSignature($factor);
         $factor->setSignature($signature);
         $tag = self::_getTag($factor);
         $factor->setTag($tag);
-    }
-
-    /**
-     * Helper function for _initializeFactorByClass().
-     *
-     * Further customize factor object initialization based on its type.
-     *
-     * @param \Calc\Symbol\Factor $factor symbol object representing a factor
-     * @param \Calc\Symbol\Term   $term   symbol object representing a term
-     *
-     * @return void
-     */
-    private static function _initializeFactorByType(Factor & $factor, $term)
-    {
-        $type = $factor->getType();
-        switch ($type) {
-        case K::POWER:
-            $powers = self::_getPowers($factor);
-            self::_initializeFactor($factor, $powers, $term);
-            break;
-        default:
-            self::_initializeFactor($factor, null, $term);
-        }
-    }
-
-    /**
-     * Helper function for _getFactor().
-     *
-     * Further customize the factor object initialization based on the class.
-     *
-     * @param object              $factor symbol object representing a factor
-     * @param \Calc\Symbol\Term   $term   symbol object representing a term
-     *
-     * @return void
-     */
-    private static function _initializeFactorByClass(& $factor, Term $term)
-    {
-        switch (get_class($factor)) {
-        case 'Calc\\Symbol\\Factor':
-            self::_initializeFactorByType($factor, $term);
-            break;
-        case 'Calc\\Symbol\\Enclosure':
-            self::_initializeEnclosure($factor, $term);
-            break;
-        }
-    }
-
-    /**
-     * Get factor objects.
-     *
-     * Breaks the given term object into factors.
-     *
-     * @param \Calc\Symbol\Term $term term object.
-     *
-     * @return array
-     */
-    private static function _getFactors(Term & $term)
-    {
-        $factors = [];
-        $exp = (string) $term;
-        $tokens = self::_getFactorTokens($exp);
-        $term->setTokens($tokens);
-
-        foreach ($tokens as $str) {
-            $factor = self::_newFactor($str);
-            self::_initializeFactorByClass($factor, $term);
-            $factors[] = Sheet::insert($factor);
-        }
-
-        return $factors;
     }
 
 }

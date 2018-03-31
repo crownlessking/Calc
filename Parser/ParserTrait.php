@@ -1,10 +1,28 @@
 <?php
 
+/**
+ * PHP version 7.x
+ *
+ * @category API
+ * @package  Crownlessking/Calc
+ * @author   Riviere King <riviere@crownlessking.com>
+ * @license  N/A <no.license.yet@crownlessking.com>
+ * @link     http://www.crownlessking.com
+ */
 namespace Calc\Parser;
 
-use Calc\RX;
-use Calc\Sheet;
-
+/**
+ * Parser trait.
+ *
+ * This trait can provide parsing capabilities to any classes throughout the
+ * application.
+ * 
+ * @category API
+ * @package  Crownlessking/Calc
+ * @author   Riviere King <riviere@crownlessking.com>
+ * @license  N/A <no.license.yet@crownlessking.com>
+ * @link     http://www.crownlessking.com
+ */
 trait ParserTrait
 {
     /**
@@ -82,84 +100,6 @@ trait ParserTrait
             return self::_findOpening($text, $position, '[', ']');
         }
         throw new InvalidEnclosureSymbolException();
-    }
-
-    private static function _isEnclosure($str)
-    {
-        if (preg_match(RX::PARENTHESES_START, $str) === 1) {
-            $index = strpos($str, "(");
-            $chars = str_split($str);
-            $match = self::findMatching($chars, $index);
-            $length = count($chars);
-            if ($match === $length - 1) {
-                return true;
-            }
-        } else if (preg_match(RX::BRACKETS_START, $str) === 1) {
-            $index = strpos($str, "[");
-            $chars = str_split($str);
-            $match = self::findMatching($chars, $index, '[');
-            $length = count($chars);
-            if ($match === $length - 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Get the symbol's signature.
-     *
-     * @param object $obj
-     *
-     * @return string
-     */
-    private static function _getSignature($obj)
-    {
-        $str = (string) $obj;
-        return $str;
-    }
-
-    /**
-     * Assigns a tag to an expression object.
-     *
-     * @param object $expObj expression
-     *
-     * @return string
-     */
-    private static function _getTag($expObj)
-    {
-        $sig = $expObj->getSignature();
-
-        if (!$sig || empty($sig)) {
-            $m = 'The signature needs to be set first to get the tag.';
-            throw new \LogicException($m);
-        }
-        $tag = Sheet::getTag($sig);
-
-        return $tag;
-    }
-
-    /**
-     * 
-     *
-     * @param object  $obj         Symbol object
-     * @param integer $parentIndex Parent object index in the data structure.
-     *
-     * @return void
-     */
-    private static function _initializeEnclosure(& $obj, $parentIndex)
-    {
-        $obj->setParentIndex($parentIndex);
-
-        $content = $obj->getContent();
-        $exp = self::_analyze($content, $obj);
-        $terms = $exp->getTermIndexes();
-        $obj->setTermIndexes($terms);
-
-        $signature = $exp->getSignature();
-        $obj->setSignature($signature);
-        $tag = self::_getTag($obj);
-        $obj->setTag($tag);
     }
 
 }

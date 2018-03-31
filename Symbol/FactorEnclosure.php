@@ -10,10 +10,10 @@
  * @link     http://www.crownlessking.com
  */
 
-namespace Calc\Formulation;
+namespace Calc\Symbol;
 
 /**
- * Term rules.
+ * Factor enclosure.
  *
  * @category API
  * @package  Crownlessking/Calc
@@ -21,12 +21,18 @@ namespace Calc\Formulation;
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
-class TermRules
+class FactorEnclosure extends Enclosure
 {
-    const RULES = [
-        'a+b' => [
-            'callback' => 'plus'
-        ]
-    ];
+    use FactorTrait;
+
+    /**
+     * Constructor.
+     *
+     * @param string $exp expression string
+     */
+    function __construct(string $exp)
+    {
+        parent::__construct($exp);
+    }
 
 }

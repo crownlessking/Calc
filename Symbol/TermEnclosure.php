@@ -6,33 +6,33 @@
  * @category API
  * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  N/A <no.license.yet@crownlessking.com>
+ * @license  Crownless King Network
  * @link     http://www.crownlessking.com
  */
 
 namespace Calc\Symbol;
 
 /**
- * Power class.
+ * Term enclosure class.
  *
  * @category API
  * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  N/A <no.license.yet@crownlessking.com>
+ * @license  Crownless King Network
  * @link     http://www.crownlessking.com
  */
-class Power extends Symbol
+class TermEnclosure extends Enclosure
 {
-    use PowerTrait;
-
+    use TermTrait;
+    
     /**
-     * Power Constructor.
+     * Constructor
      *
-     * @param string $exp expression containing the power.
+     * @param string $token string representing an expression
      */
-    function __construct(string $exp)
+    function __construct(string $token)
     {
-        parent::__construct($exp);
+        parent::__construct($token);
     }
 
 }

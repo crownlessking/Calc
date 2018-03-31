@@ -3,8 +3,8 @@
 /**
  * PHP version 7.x
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
@@ -14,23 +14,21 @@ namespace Calc\Parser;
 
 use Calc\K;
 use Calc\RX;
-use Calc\Sheet;
-use Calc\Symbol\Enclosure;
-use Calc\Symbol\Factor;
+use Calc\Math\Sheet;
+use Calc\Symbol\PowerEnclosure;
 use Calc\Symbol\Power;
 
 /**
  * Calc parser.
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
  */
 trait PowerParserTrait
 {
-
     /**
      * Break the expression given into the base and the exponent.
      *
@@ -88,7 +86,7 @@ trait PowerParserTrait
             }
         }
         if (self::_isEnclosure($str)) {
-            return K::ENCLOSURE;
+            return K::POWER_ENCLOSURE;
         }
         return K::UNKNOWN;
     }
@@ -98,15 +96,14 @@ trait PowerParserTrait
      *
      * @param string $str string representation of a base or power or both.
      *
-     * @return \Calc\Symbol\Power|\Calc\Symbol\Enclosure
+     * @return \Calc\Symbol\Power|\Calc\Symbol\PowerEnclosure
      */
     private static function _newPower(string $str)
     {
         $type = self::_identifyPower($str);
         switch ($type) {
-        case K::ENCLOSURE:
-            $power = new Enclosure($str);
-            $power->setEnclosureClass(K::POWER);
+        case K::POWER_ENCLOSURE:
+            $power = new PowerEnclosure($str);
             break;
         default:
             $power = new Power($str);
@@ -116,8 +113,9 @@ trait PowerParserTrait
     }
 
     /**
+     * Get power signature.
      *
-     * @param Calc\Symbol\Power $power
+     * @param Calc\Symbol\Power $power symbol object
      *
      * @return string
      */
@@ -126,7 +124,7 @@ trait PowerParserTrait
         switch (get_class($power)) {
         case 'Calc\\Symbol\\Power':
             return self::_getSignature($power);
-        case 'Calc\\Symbol\\Enclosure':
+        case 'Calc\\Symbol\\PowerEnclosure':
             return $power->getSignature();
         }
         return 'n/a';
@@ -139,21 +137,18 @@ trait PowerParserTrait
      *      the power type of "5" would be "base".
      *      the power type of "3" would be "exponent".
      *
-     * @param \Calc\Symbol\Power $power  object representing a raise-to-power
-     *                                   operand.
-     * @param array              $tokens array of string tokens
+     * @param \Calc\Symbol\Power $power object representing a raise-to-power
+     *                                  operand.
+     * @param array              $order array of string tokens
+     * @param integer            $total length of the array of indexes.
      *
      * @return void
      */
-    private static function _setPowerType(& $power, $tokens)
+    private static function _setPowerType(& $power, $order, $total)
     {
-        $fTokens = array_flip($tokens);
-        $exp = (string) $power;
-        $index = $fTokens[$exp];
-
-        if ($index === 0) {
+        if ($order === 0) {
             $power->setPowerType(K::BASE);
-        } else if ($index === count($fTokens) - 1) {
+        } else if ($order === $total - 1) {
             $power->setPowerType(K::EXPONENT);
         } else {
             $power->setPowerType(K::B_AND_E);
@@ -161,70 +156,36 @@ trait PowerParserTrait
     }
 
     /**
+     * Get power object.
+     *
+     * @param string $token  string representing an expression.
+     * @param object $parent parent object
+     *
+     * @return array
+     */
+    private static function _savePower($token, $parent)
+    {
+        $power = self::_newPower($token);
+        $parentIndex = $parent->getIndex();
+        $power->setParentIndex($parentIndex);
+        Sheet::insert($power);
+
+        return $power;
+    }
+
+    /**
      * Set inner values of power object.
      *
-     * @param \Calc\Symbol\Power  $power  power object.
-     * @param \Calc\Symbol\Factor $parentObj factor object.
+     * @param \Calc\Symbol\Power $power power object.
      *
      * @return void
      */
-    private static function _initializePower(Power &$power, Factor $parentObj)
+    private static function _setPowerData(& $power)
     {
-        $index = $parentObj->getParentIndex();
-        $power->setParentIndex($index);
         $signature = self::_getPowerSignature($power);
         $power->setSignature($signature);
         $tag = self::_getTag($power);
         $power->setTag($tag);
-        $tokens = $parentObj->getTokens();
-    }
-
-    /**
-     * Helper function for _getPowers().
-     *
-     * Further customize the power object initialization based on the class.
-     *
-     * @param object              $power  represents a base or exponent
-     * @param \Calc\Symbol\Factor $factor object representing a factor
-     *
-     * @return void
-     */
-    private static function _initializePowerByClass(& $power, Factor $factor)
-    {
-        switch (get_class($power)) {
-        case 'Calc\\Symbol\\Power':
-            self::_initializePower($power, $factor);
-            break;
-        case 'Calc\\Symbol\\Enclosure':
-            self::_initializeEnclosure($power, $factor);
-            break;
-        }
-    }
-
-    /**
-     * Get power indexes.
-     *
-     * @param \Calc\Symbol\Factor $factor factor object.
-     *
-     * @return array
-     */
-    private static function _getPowers(Factor & $factor)
-    {
-        $powers = [];
-        $exp = (string) $factor;
-        $tokens = self::_getPowerTokens($exp);
-        $factor->setTokens($tokens);
-
-        foreach ($tokens as $str) {
-            $power = self::_newPower($str);
-            self::_initializePowerByClass($power, $factor);
-            $id = Sheet::insert($power);
-            $powers[] = $id;
-            $power->setIndex($id);
-            self::_setPowerType($power, $tokens);
-        }
-
-        return $powers;
     }
 
 }

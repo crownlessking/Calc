@@ -13,9 +13,7 @@
 namespace Calc\Parser;
 
 use Calc\K;
-use Calc\Sheet;
-use Calc\Symbol\Expression;
-use Calc\Symbol\Enclosure;
+use Calc\Math\Sheet;
 
 /**
  * Calc parser.
@@ -29,60 +27,190 @@ use Calc\Symbol\Enclosure;
 class Parser
 {
     use ParserTrait;
+    use CommonParserTrait;
     use PowerParserTrait;
     use FactorParserTrait;
     use TermParserTrait;
 
-    private static function _getExpressionSignature(Expression $exp)
+    /**
+     * Get symbol object's real type always.
+     *
+     * An object can have two types, if its primary type is "fraction".
+     * 
+     * e.g. 1/5
+     * 
+     * In this case, "1" is a "natural" and "/5" is the "fraction" but it is also
+     * a "natural" because of the "5".
+     * To retrieve the type "natural" for the "5", the Factor::getFactorType()
+     * can be used.
+     * This function simply ignores the type "fraction" and always returns the
+     * symbol's real type which would be "natural" in the case of the "5".
+     *
+     * @param object $obj any symbol object.
+     *
+     * @return integer
+     */
+    private static function _getType($obj)
     {
-        $termIndexes = $exp->getTermIndexes();
-        if ($termIndexes) {
-            foreach ($termIndexes as $i) {
-                $t = Sheet::select($i);
-                $signatures[] = $t->getSignature();
+        return ($obj->getType() !== K::FRACTION)
+                ? $obj->getType()
+                : $obj->getFactorType();
+    }
+
+    /**
+     * Converts string tokens to (Symbol) Power objects, stores them in the
+     * math sheet's step, then returns their indexes.
+     *
+     * @param array  $tokens array of strings representing powers
+     * @param object $factor symbol object representing a factor
+     *
+     * @see \Calc\Math\Sheet
+     *
+     * @return array
+     */
+    private static function _savePowers($tokens, $factor)
+    {
+        $cntr = 0;
+        $count = count($tokens);
+        $indexes = [];
+        foreach ($tokens as $token) {
+            $power = self::_newPower($token);
+            $parentIndex = $factor->getIndex();
+            $power->setParentIndex($parentIndex);
+            $indexes[] = Sheet::insert($power);
+            if ($power->getType() === K::POWER_ENCLOSURE) {
+                self::_analyze($power);
+                self::_setEnclosureData($power);
+            } else {
+                self::_setPowerData($power);
             }
-            $sortedSignatures = K::quickSort($signatures);
-            $signature = implode('+', $sortedSignatures);
-            return $signature;
+            Sheet::poolTag($power);
+            self::_setPowerType($power, $cntr, $count);
+            $cntr++;
         }
-        $signature = self::_getSignature($exp);
-        return $signature;
+        return $indexes;
     }
 
     /**
-     * Get an expression object.
+     * Converts string tokens to (Symbol) Factor objects, stores them in the
+     * math sheet's step, then returns their indexes.
      *
-     * @param string                 $str    string expression
-     * @param \Calc\Symbol\Enclosure $parentIndex enclosure object.
+     * @param array  $tokens array of strings representing factors
+     * @param object $term   symbol object representing a term
      *
-     * @return \Calc\Symbol\Expression
+     * @see \Calc\Math\Sheet
+     *
+     * @return array
      */
-    private static function _analyze(string $str, Enclosure $parentIndex = null)
+    private static function _saveFactors($tokens, $term)
     {
-        $exp = new Expression($str);
-        if ($parentIndex) {
-            $exp->setParentIndex($parentIndex);
+        $indexes = [];
+        foreach ($tokens as $token) {
+            $factor = self::_newFactor($token);
+            $parentIndex = $term->getIndex();
+            $factor->setParentIndex($parentIndex);
+            $type = self::_getType($factor);
+            switch ($type) {
+            case K::POWER:
+                $indexes[] = Sheet::insert($factor);
+                $powerTokens = self::_getPowerTokens($token);
+                $powerIndexes = self::_savePowers($powerTokens, $factor);
+                self::_setFactorData($factor, $powerTokens, $powerIndexes);
+                break;
+            case K::FACTOR_ENCLOSURE:
+                $indexes[] = Sheet::insert($factor);
+                self::_analyze($factor);
+                self::_setEnclosureData($factor);
+                break;
+            default:
+                self::_setFactorData($factor, [], []);
+                $indexes[] = Sheet::insert($factor);
+            }
+            Sheet::poolTag($factor);
         }
-        $tokens = self::_getTermTokens($str);
-        $exp->setTokens($tokens);
-        $terms = self::_getTerms($tokens, $exp);
-        $exp->setTermIndexes($terms);
-        $signature = self::_getExpressionSignature($exp);
-        $exp->setSignature($signature);
-
-        return $exp;
+        return $indexes;
     }
 
     /**
-     * Get an expression object from the input string.
+     * Converts string tokens to (Symbol) Term objects, stores them in the
+     * math sheet's step, then returns their indexes.
      *
-     * @param string $expression string expression
+     * @param array  $tokens array of strings
+     * @param object $parent parent symbol
+     *
+     * @see \Calc\Math\Sheet
+     *
+     * @return array
+     */
+    private static function _saveTerms($tokens, $parent)
+    {
+        $indexes = [];
+        foreach ($tokens as $token) {
+            $term = self::_newTerm($token);
+            $parentIndex = $parent->getIndex();
+            $term->setParentIndex($parentIndex);
+            switch ($term->getType()) {
+            case K::FACTOR:
+                $indexes[] = Sheet::insert($term);
+                $factorTokens = self::_getFactorTokens($token);
+                $factorIndexes = self::_saveFactors($factorTokens, $term);
+                self::_setTermData($term, $factorTokens, $factorIndexes);
+                break;
+            case K::TERM_ENCLOSURE:
+                $indexes[] = Sheet::insert($term);
+                self::_analyze($term);
+                self::_setEnclosureData($term);
+                break;
+            default:
+                self::_setTermData($term, [], []);
+                $indexes[] = Sheet::insert($term);
+            }
+            Sheet::poolTag($term);
+        }
+        return $indexes;
+    }
+
+    /**
+     * Analyzes an expression.
+     *
+     * This function is the indirect recursive part of the analysis process.
+     *
+     * @param object $obj symbol object
+     *
+     * @return void
+     */
+    private static function _analyze(& $obj)
+    {
+        switch (self::_getType($obj)) {
+        case K::TERM_ENCLOSURE:
+        case K::FACTOR_ENCLOSURE:
+        case K::POWER_ENCLOSURE:
+            $expStr = $obj->getContent();
+            break;
+        default:
+            $expStr = (string) $obj;
+        }
+        $tokens = self::_getTermTokens($expStr);
+        $obj->setTokens($tokens);
+        $termIndexes = self::_saveTerms($tokens, $obj);
+        $obj->setTermIndexes($termIndexes);
+    }
+
+    /**
+     * Analyzes an expression.
+     *
+     * @param string $expStr string expression
      *
      * @return \Calc\Symbol\Expression
      */
-    public static function newAnalysis(string $expression)
+    public static function analyze(string $expStr)
     {
-        $expObj = self::_analyze($expression);
+        Sheet::clear();
+        $expObj = new \Calc\Symbol\Expression($expStr);
+        $expObj->setParentIndex(K::ROOT);
+        $expObj->setType(K::EXPRESSION);
+        $expObj->setIndex(K::ROOT);
+        self::_analyze($expObj);
 
         return $expObj;
     }
@@ -90,10 +218,14 @@ class Parser
     /**
      * Get analysis data.
      *
+     * Once an expression has been analyzed, this function can be used to
+     * retrieve the data.
+     *
      * @return array
      */
     public static function getAnalysisData()
     {
         return Sheet::getAnalysisData();
     }
+
 }

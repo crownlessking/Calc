@@ -6,7 +6,7 @@
  * @category Math
  * @package  Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
+ * @license  https://github.com/crownlessking/Calc/blob/master/LICENSE Apache-2.0
  * @link     http://www.crownlessking.com
  */
 
@@ -18,11 +18,15 @@ namespace Calc\Symbol;
  * @category Math
  * @package  Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
+ * @license  https://github.com/crownlessking/Calc/blob/master/LICENSE Apache-2.0
  * @link     http://www.crownlessking.com
  */
 class Factor extends Symbol
 {
+
+    use FactorTrait;
+    use \Calc\Math\Arithmetics\ArithmeticsCommonTrait;
+    use \Calc\Math\Arithmetics\ArithmeticsFactorTrait;
 
     /**
      * Array of Power objects.
@@ -30,18 +34,6 @@ class Factor extends Symbol
      * @var array
      */
     protected $powerIndexes;
-
-    /**
-     * The type of current factor.
-     *
-     * In case the current object's type is "denominator", this variable would,
-     * indicate the type of denominator
-     *
-     * @see K for the list of types
-     *
-     * @var integer
-     */
-    protected $factorType;
 
     /**
      * Get an array of the index locations of all child objects.
@@ -56,16 +48,6 @@ class Factor extends Symbol
     }
 
     /**
-     * Get the factor's type.
-     *
-     * @return integer
-     */
-    public function getFactorType()
-    {
-        return $this->factorType;
-    }
-
-    /**
      * Get a version of the expression without the complexity of enclosures.
      *
      * @return string
@@ -74,10 +56,10 @@ class Factor extends Symbol
     {
         if (isset($this->simplifiedExp)) {
             return $this->simplifiedExp;
-        } else if (isset($this->powerIndexes)) {
+        } else if (!empty($this->powerIndexes)) {
             $simplifiedExp = '';
             foreach ($this->powerIndexes as $i) {
-                $p = \Calc\Sheet::select($i);
+                $p = \Calc\Math\Sheet::select($i);
                 if (empty($simplifiedExp)) {
                     $simplifiedExp .= $p->getSimplifiedExp();
                 } else {
@@ -104,17 +86,10 @@ class Factor extends Symbol
     }
 
     /**
-     * Set the factor's type.
+     * Constructor.
      *
-     * @see K for the list of types
-     *
-     * @param string $type
+     * @param string $exp expression string
      */
-    public function setFactorType(int $type)
-    {
-        $this->factorType = $type;
-    }
-
     function __construct(string $exp)
     {
         parent::__construct($exp);

@@ -3,8 +3,8 @@
 /**
  * PHP version 7.x
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
@@ -14,9 +14,7 @@ namespace Calc\Parser;
 
 use Calc\K;
 use Calc\RX;
-use Calc\Sheet;
-use Calc\Symbol\Expression;
-use Calc\Symbol\Enclosure;
+use Calc\Math\Sheet;
 use Calc\Symbol\Term;
 
 /**
@@ -31,34 +29,16 @@ use Calc\Symbol\Term;
 trait TermParserTrait
 {
     /**
-     * Get the type or category of mathematical expression.
-     *
-     * E.g. whether the expression is an integer, variable, or sub-expression
-     * parentheses.
-     *
-     * This categorizing makes it easier to convert the expression to a value
-     * that can be computed. For example, if the expression is an integer,
-     * it will be cast to an INT so it can be computed.
-     *
-     * @param string $element string representing a mathematical expression.
-     *
-     * @return string
-     */
-    private static function _identifyTerm(string $element)
-    {
-        foreach (RX::TERM_SYM_DEF as $type => $regex) {
-            if (preg_match($regex, $element) === 1) {
-                return K::DESC[$type];
-            }
-        }
-        if (self::_isEnclosure($element)) {
-            return K::ENCLOSURE;
-        }
-        return K::FACTOR;
-    }
-
-    /**
      * Handles negative sign.
+     *
+     * This function forces the negative sign to be included in the token, as
+     * part of the number. It does this by ignoring the operator, depending on
+     * its location within the expression e.g.
+     *
+     * "5+-3" would result in two tokens, ["5", "-3"]
+     *
+     * In the previous example, the negative sign was included with the "3" as
+     * part of the number. The same result is obtained from "5-3".
      *
      * @param array   $elements array of string tokens
      * @param string  $expStr   string expression
@@ -127,127 +107,204 @@ trait TermParserTrait
     }
 
     /**
+     * Get the type or category of mathematical expression.
+     *
+     * E.g. whether the expression is an integer, variable, or expression in
+     * parentheses.
+     *
+     * This categorizing makes it easier to convert the expression to a value
+     * that can be computed. For example, if the expression is an integer,
+     * it will be cast to an INT so it can be computed.
+     *
+     * @param string $token string representing a mathematical expression.
+     *
+     * @return string
+     */
+    private static function _identifyTerm(string $token)
+    {
+        foreach (RX::TERM_SYM_DEF as $type => $regex) {
+            if (preg_match($regex, $token) === 1) {
+                return K::DESC[$type];
+            }
+        }
+        if (self::_isEnclosure($token)) {
+            return K::TERM_ENCLOSURE;
+        }
+        return K::FACTOR;
+    }
+
+    /**
      * Get a new term object from a string.
      *
-     * @param string $element string expression representing a term.
+     * @param string $token string representing a term.
      *
-     * @return \Calc\Symbol\Term|\Calc\Symbol\Enclosure
+     * @return \Calc\Symbol\Term|\Calc\Symbol\TermEnclosure
      */
-    private static function _newTerm(string $element)
+    private static function _newTerm(string $token)
     {
-        $type = self::_identifyTerm($element);
+        $type = self::_identifyTerm($token);
         switch ($type) {
-        case K::ENCLOSURE:
-            $term = new Enclosure($element);
-            $term->setEnclosureClass(K::TERM);
+        case K::TERM_ENCLOSURE:
+            $term = new \Calc\Symbol\TermEnclosure($token);
             break;
         default:
-            $term = new Term($element);
+            $term = new Term($token);
         }
         $term->setType($type);
+
         return $term;
     }
 
+    /**
+     * Get signature based on the symbol's type.
+     *
+     * This function has two use. It will help generate a like-term signature or
+     * a default term signature. The only difference, for the like-term
+     * signature, constants are not included.
+     *
+     * e.g. "x^3" and "5*x^3" have the same like-term signature, "x^3"
+     *      the "5" was not included.
+     *
+     * @param object  $obj           Symbol object (usually a Factor).
+     * @param integer $signatureType signature type
+     *
+     * @return string
+     */
+    private static function _getBySignatureType($obj, $signatureType)
+    {
+        if ($signatureType === K::LIKE_TERM) {
+            $type = $obj->getType();
+            switch ($type) {
+            case K::NATURAL:
+            case K::INTEGER:
+            case K::DECIMAL:
+                return '';
+            }
+        }
+        return $obj->getSignature();
+    }
+
+    /**
+     * Get the signature of all sub symbols.
+     *
+     * @param array   $indexes array of object indexes.
+     * @param integer $type    integer indicating the type of signature
+     *
+     * @return array
+     */
+    private static function _getSubSignatures($indexes, $type = K::DEFAULT_)
+    {
+        $tmp = [];
+        foreach ($indexes as $i) {
+            $factor = Sheet::select($i);
+            $sig = self::_getBySignatureType($factor, $type);
+            if (!empty($sig)) {
+                $tmp[] = $sig;
+            }
+        }
+        return $tmp;
+    }
+
+    /**
+     * Get term signature.
+     *
+     * @param \Calc\Symbol\Term $term term symbol
+     *
+     * @return string
+     */
     private static function _getTermSignature(Term $term)
     {
         $factorIndexes = $term->getFactorIndexes();
-        if ($factorIndexes) {
-            foreach ($factorIndexes as $i) {
-                $f = Sheet::select($i);
-                $s = $f->getSignature();
-                $tmp[] = $s;
-            }
+        if (!empty($factorIndexes)) {
+            $tmp = self::_getSubSignatures($factorIndexes);
             $signatures = K::quickSort($tmp);
             $signature = implode('*', $signatures);
             return $signature;
+        } else if ($factorIndexes === null) {
+            $m = 'The "term" must be processed first. If it was, $factorIndexes'
+                    . ' should at least be an empty array.';
+            throw new \LogicException($m);
         }
         $signature = self::_getSignature($term);
+
         return $signature;
+    }
+
+    /**
+     * Get like term signature.
+     *
+     * @param \Calc\Symbol\Term $term term symbol
+     *
+     * @return string
+     */
+    private static function _getLikeTermSignature(Term $term)
+    {
+        $factorIndexes = $term->getFactorIndexes();
+        if (!empty($factorIndexes)) {
+            $tmp = self::_getSubSignatures($factorIndexes, K::LIKE_TERM);
+            $signatures = K::quickSort($tmp);
+            $signature = implode('*', $signatures);
+            return $signature;
+        } else if (isset($factorIndexes)) {
+            $signature = self::_getBySignatureType($term, K::LIKE_TERM);
+            return $signature;
+        }
+        $m = 'The "term" must be of type FACTOR and its "factor" children'.
+                ' must be processed first.';
+        throw new \LogicException($m);
+    }
+
+    /**
+     * Get the term indexes.
+     *
+     * After the parser has broken up the expression into tokens, this function
+     * will convert them into Term objects and insert them into an array.
+     *
+     * Since the Term objects will be inserted in the "steps" array, the index
+     * location of each object will be returned instead.
+     *
+     * @param array  $token  string representing a term.
+     * @param object $parent parent symbol object
+     *
+     * @see \Calc\Math\Sheet::$_sheet['steps']
+     *
+     * @return object
+     */
+    private static function _saveTerm($token, $parent)
+    {
+        $term = self::_newTerm($token);
+        $parentIndex = $parent->getIndex();
+        $term->setParentIndex($parentIndex);
+        $index = Sheet::insert($term);
+        $term->setIndex($index);
+        Sheet::update($term);
+
+        return $term;
     }
 
     /**
      * Set inner values for term object.
      *
-     * @param \Calc\Symbol\Term $term    term object.
-     * @param array             $factorIndexes array of factor objects.
-     * @param integer           $parentIndex  expression object.
+     * @param Term  $term          term object.
+     * @param array $tokens        array of string tokens
+     * @param array $factorIndexes array of factor indexes in the step. The
+     *                             term is made of these factors. They are
+     *                             its children.
      *
      * @return void
      */
-    private static function _initializeTerm(& $term, $factorIndexes, $parentIndex)
+    private static function _setTermData(& $term, array $tokens, array $factorIndexes)
     {
-        $term->setParentIndex($parentIndex);
-        if (isset($factorIndexes)) {
-            $term->setFactorIndexes($factorIndexes);
-        }
+        $term->setTokens($tokens);
+        $term->setFactorIndexes($factorIndexes);
         $signature = self::_getTermSignature($term);
         $term->setSignature($signature);
         $tag = self::_getTag($term);
         $term->setTag($tag);
-    }
-
-    /**
-     * Helper function for _initializeTermByClass().
-     *
-     * Further customizes the term object initialization by its type.
-     *
-     * @param \Calc\Symbol\Term       $term   object representing a term
-     * @param \Calc\Symbol\Expression $parent object representing an expression.
-     *
-     * @return void
-     */
-    private static function _initializeTermByType(Term & $term, $parent)
-    {
-        $type = $term->getType();
-        switch ($type) {
-        case K::FACTOR:
-        case K::FRACTION:
-            $factors = self::_getFactors($term);
-            self::_initializeTerm($term, $factors, $parent);
-            break;
-        default:
-            self::_initializeTerm($term, null, $parent);
-        }
-    }
-
-    /**
-     * Helper function for _getTerms().
-     *
-     * It further customize the term object initialization based on its class.
-     *
-     * @param object                  $term object representing a term
-     * @param \Calc\Symbol\Expression $exp  object representing an expression.
-     *
-     * @return void
-     */
-    private static function _initializeTermByClass(& $term, $exp)
-    {
-        switch (get_class($term)) {
-        case 'Calc\\Symbol\\Term':
-            self::_initializeTermByType($term, $exp);
-            break;
-        case 'Calc\\Symbol\\Enclosure':
-            self::_initializeEnclosure($term, $exp);
-            break;
-        }
-    }
-
-    /**
-     * Get the term objects.
-     *
-     * @param array $tokens array of token strings representing terms.
-     *
-     * @return array
-     */
-    private static function _getTerms(array $tokens, Expression $parent)
-    {
-        $terms = [];
-        foreach ($tokens as $str) {
-            $term = self::_newTerm($str);
-            self::_initializeTermByClass($term, $parent);
-            $terms[] = Sheet::insert($term);
-        }
-        return $terms;
+        $likeTermSignature = (get_class($term) === 'Calc\\Symbol\\TermEnclosure')
+                ? self::_getBySignatureType($term, K::LIKE_TERM)
+                : self::_getLikeTermSignature($term);
+        $term->setLikeTermSignature($likeTermSignature);
     }
 
 }

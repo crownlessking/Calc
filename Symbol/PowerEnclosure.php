@@ -10,10 +10,10 @@
  * @link     http://www.crownlessking.com
  */
 
-namespace Calc\Formulation;
+namespace Calc\Symbol;
 
 /**
- * Term rules.
+ * Power enclosure.
  *
  * @category API
  * @package  Crownlessking/Calc
@@ -21,12 +21,18 @@ namespace Calc\Formulation;
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
-class TermRules
+class PowerEnclosure extends Enclosure
 {
-    const RULES = [
-        'a+b' => [
-            'callback' => 'plus'
-        ]
-    ];
+    use PowerTrait;
+
+    /**
+     * Power Constructor.
+     *
+     * @param string $exp expression containing the power.
+     */
+    function __construct(string $exp)
+    {
+        parent::__construct($exp);
+    }
 
 }

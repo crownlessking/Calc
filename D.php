@@ -1,15 +1,25 @@
 <?php
 
+/**
+ * PHP version 7.x
+ *
+ * @category API
+ * @package  Crownlessking/Calc
+ * @author   Riviere King <riviere@crownlessking.com>
+ * @license  N/A <no.license.yet@crownlessking.com>
+ * @link     http://www.crownlessking.com
+ */
+
 namespace Calc;
 
 /**
  * Missing content type exception definition
  *
- * @category N/A
- * @package  N/A
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <rking@geniuscove.com>
  * @license  N/A <no.license.yet@geniuscove.com>
- * @link     N/A
+ * @link     http://www.crownlessking.com
  */
 class DebuggingException extends \Exception
 {
@@ -38,9 +48,26 @@ class DebuggingException extends \Exception
     }
 }
 
+/**
+ * Debugging class.
+ *
+ * @category API
+ * @package  Crownlessking/Calc
+ * @author   Riviere King <riviere@crownlessking.com>
+ * @license  N/A <no.license.yet@crownlessking.com>
+ * @link     http://www.crownlessking.com
+ */
 class D
 {
 
+    /**
+     * Dump values of Term symbols.
+     *
+     * @param array  $data Array of data to be returned.
+     * @param object $obj  Symbol object.
+     *
+     * @return void
+     */
     private static function _analysisDumpTerm(& $data, $obj)
     {
         $data['terms'] = isset($data['terms'])
@@ -50,10 +77,19 @@ class D
             'value'     => (string) $obj,
             'type'      => K::getDesc($obj->getType()),
             'tag'       => $obj->getTag(),
-            'signature' => $obj->getSignature()
+            'signature' => $obj->getSignature(),
+            'like-term_signature' => $obj->getLikeTermSignature()
         ];
     }
 
+    /**
+     * Dump values of Factor objects.
+     *
+     * @param array  $data Array of data to be returned.
+     * @param object $obj  Symbol object.
+     *
+     * @return void
+     */
     private static function _analysisDumpFactor(& $data, $obj)
     {
         $data['factors'] = isset($data['factors'])
@@ -68,6 +104,14 @@ class D
         ];
     }
 
+    /**
+     * Dump values of Power powers.
+     *
+     * @param array  $data Array of data to be returned.
+     * @param object $obj  Symbol object.
+     *
+     * @return void
+     */
     private static function _analysisDumpPower(& $data, $obj)
     {
         $data['powers'] = isset($data['powers'])
@@ -82,50 +126,74 @@ class D
         ];
     }
 
-    private static function _analysisDumpEnclosure(& $data, $obj)
-    {
-        $enclosureClass = $obj->getEnclosureClass();
-        switch ($enclosureClass) {
-        case K::TERM:
-            self::_analysisDumpPower($data, $obj);
-            break;
-        case K::FACTOR:
-            self::_analysisDumpFactor($data, $obj);
-            break;
-        case K::POWER:
-            self::_analysisDumpPower($data, $obj);
-            break;
-        }
-    }
-
+    /**
+     * Dump values of Term objects.
+     *
+     * @param array   $steps Application data structure.
+     * @param integer $index Symbol index in the $steps array.
+     *
+     * @return array
+     */
     public static function analysisDump($steps, $index = 0)
     {
         $data = [];
         $step = $steps[$index];
         foreach ($step as $obj) {
-            $class = get_class($obj);
+            $class = K::getClass($obj);
             switch ($class) {
-            case 'Calc\\Symbol\\Term':
+            case K::TERM:
+            case K::TERM_ENCLOSURE:
                 self::_analysisDumpTerm($data, $obj);
                 break;
-            case 'Calc\\Symbol\\Factor':
+            case K::FACTOR:
+            case K::FACTOR_ENCLOSURE:
                 self::_analysisDumpFactor($data, $obj);
                 break;
-            case 'Calc\\Symbol\\Power':
+            case K::POWER:
+            case K::POWER_ENCLOSURE:
                 self::_analysisDumpPower($data, $obj);
-                break;
-            case 'Calc\\Symbol\\Enclosure':
-                self::_analysisDumpEnclosure($data, $obj);
                 break;
             }
         }
         return $data;
     }
 
+    /**
+     * Convert variable content to a string.
+     * 
+     * @param mixed $var any variable
+     *
+     * @return string
+     */
+    public static function print_($var)
+    {
+        if (is_array($var)) {
+            return print_r($var, true);
+        }
+        return $var;
+    }
+
+    /**
+     * Artificially triggers a exception for debugging purpose.
+     *
+     * Helps check the values of variables.
+     *
+     * @param string $received Value that was received.
+     * @param string $expected Value that was expected.
+     *
+     * @return void
+     */
     public static function expect($received, $expected)
     {
-        if ($received !== $expected) {
-            $m = "expected \"$expected\" but received \"$received\"";
+        $e = D::print_($expected);
+        $r = D::print_($received);
+        if (is_array($received) && is_array($expected)) {
+            if (!K::arraysAreSimilar($expected, $received)) {
+                $m = "expected \"$e\" but received \"$r\"";
+                throw new DebuggingException($m);
+            }
+        } else if ($received !== $expected) {
+            $m = "expected \"$e\" but received \"$r\"";
             throw new DebuggingException($m);
         }
     }

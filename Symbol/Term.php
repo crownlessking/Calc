@@ -3,10 +3,10 @@
 /**
  * PHP version 7.x
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
+ * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
 
@@ -17,22 +17,25 @@ use Calc\K;
 /**
  * Term class.
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
+ * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
 class Term extends Symbol
 {
+    use TermTrait;
+    use \Calc\Math\Arithmetics\ArithmeticsCommonTrait;
+    use \Calc\Math\Arithmetics\ArithmeticsTermTrait;
 
     protected $factorIndexes;
 
     /**
-     * Get an array of factors.
+     * Get an array of factor indexes.
      *
-     * If this term object contains any symbol that are multiplied or divided
-     * then they will be within the returned array.
+     * Contains the index locations of all children factor objects of this term
+     * within the main data structure.
      *
      * @return array
      */
@@ -50,10 +53,10 @@ class Term extends Symbol
     {
         if (isset($this->simplifiedExp)) {
             return $this->simplifiedExp;
-        } else if (isset($this->factorIndexes)) {
+        } else if (!empty($this->factorIndexes)) {
             $simplifiedExp = '';
             foreach ($this->factorIndexes as $i) {
-                $factor = \Calc\Sheet::select($i);
+                $factor = \Calc\Math\Sheet::select($i);
                 if ($factor->type === K::FRACTION || empty($simplifiedExp)) {
                     $simplifiedExp .= $factor->getSimplifiedExp();
                 } else {
@@ -67,7 +70,9 @@ class Term extends Symbol
     }
 
     /**
-     * Generate factor objects
+     * Set factor indexes.
+     *
+     * @param array $factors array of factor indexes.
      *
      * @return void
      */
@@ -76,11 +81,11 @@ class Term extends Symbol
         $this->factorIndexes = $factors;
     }
 
-    public function setTokens(array $tokens)
-    {
-        $this->tokens = $tokens;
-    }
-
+    /**
+     * Constructor.
+     *
+     * @param string $exp string representing a term expression.
+     */
     function __construct(string $exp)
     {
         parent::__construct($exp);

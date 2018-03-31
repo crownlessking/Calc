@@ -12,7 +12,7 @@
 
 namespace Calc\Symbol;
 
-use Calc\Sheet;
+use Calc\Math\Sheet;
 
 /**
  * Expression class
@@ -51,7 +51,7 @@ class Expression extends Symbol
     {
         if (isset($this->simplifiedExp)) {
             return $this->simplifiedExp;
-        } else if (isset($this->termIndexes)) {
+        } else if (!empty($this->termIndexes)) {
             $simplifiedExp = '';
             foreach ($this->termIndexes as $i) {
                 $t = Sheet::select($i);
@@ -72,7 +72,9 @@ class Expression extends Symbol
      *
      * This array should always contain at least one term.
      *
-     * @param array $termIndexes
+     * @param array $termIndexes array of indexes
+     *
+     * @return void
      */
     public function setTermIndexes(array $termIndexes)
     {

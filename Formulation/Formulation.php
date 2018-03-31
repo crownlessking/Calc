@@ -4,7 +4,7 @@
  * PHP version 7.x
  *
  * @category API
- * @package  Calc
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
@@ -12,20 +12,18 @@
 
 namespace Calc\Formulation;
 
-use Calc\D;
-use Calc\Parser\ParserTrait;
-
 /**
- * 
+ * Formulation class.
+ *
  * @category API
- * @package  Calc
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
 class Formulation
 {
-    use ParserTrait;
+    use \Calc\Parser\ParserTrait;
 
     /**
      * Helper function for _extractGetVal().
@@ -33,18 +31,18 @@ class Formulation
      * Extract token from an expression. e.g. 5+3
      * In the previous example, "5" and "3" are tokens and would be extracted.
      *
-     * @param string  $exp    expression
+     * @param string  $expStr expression string
      * @param integer $offset index
      * @param string  $char   character representing the token to be extracted.
      * @param integer $j      index representing the end of the token.
      *
      * @return array
      */
-    private static function _getArrayVal($exp, $offset, $char, $j)
+    private static function _getArrayVal($expStr, $offset, $char, $j)
     {
         if (preg_match('~[^a-z0-9.\)\(\]\[]~', $char) === 1) {
             return [
-                'token' => substr($exp, $offset, $j),
+                'token' => substr($expStr, $offset, $j),
                 'offset' => $j
             ];
         }
@@ -55,14 +53,14 @@ class Formulation
      *
      * These tokens are used to convert an expression from one form to another.
      *
-     * @param string  $exp    expression
+     * @param string  $expStr expression string
      * @param integer $offset index within the expression
      *
      * @return array
      */
-    private static function _extractGetVal($exp, $offset)
+    private static function _extractGetVal($expStr, $offset)
     {
-        $expChars = str_split($exp);
+        $expChars = str_split($expStr);
         $expLength = count($expChars);
         for ($j = 0; $j < $expLength; $j++) {
             $char = $expChars[$j];
@@ -74,11 +72,11 @@ class Formulation
                 $j = self::findMatching($expChars, $j, '['); // skip brackets
                 break;
             default:
-                return self::_getArrayVal($exp, $offset, $char, $j);
+                return self::_getArrayVal($expStr, $offset, $char, $j);
             }
         }
         return [
-            'token' => substr($exp, $offset),
+            'token' => substr($expStr, $offset),
             'offset' => $j
         ];
     }
@@ -122,7 +120,7 @@ class Formulation
      * Plugs the tokens extracted from the expression into the formula or 
      * blueprint of the new form.
      *
-     * e.g.
+     * E.g.
      * 
      * equation: a^2-b^2 = (a+b)*(a-b)
      * $trans = (a+b)*(a-b)
@@ -169,7 +167,7 @@ class Formulation
      */
     public static function rewrite($equation, $obj)
     {
-        $exp = (string) $obj;
+        $expStr = (string) $obj;
         $filtered = str_replace(' ', '', $equation);
         $splits = preg_split('~=~', $filtered);
 
@@ -180,7 +178,7 @@ class Formulation
         }
         $formula = $splits[0];
         $template = $splits[1];
-        $values = self::_extract($formula, $exp);
+        $values = self::_extract($formula, $expStr);
         $trans = self::_transform($template, $values);
 
         return $trans;

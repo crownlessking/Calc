@@ -3,8 +3,8 @@
 /**
  * PHP version 7.x
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
@@ -14,9 +14,10 @@ namespace Calc\Symbol;
 
 use Calc\K;
 use Calc\RX;
-use Calc\D;
 
 /**
+ * Enclosure class.
+ *
  * An enclosure is an expression in between parentheses or brackets.
  *
  * E.g. "(5+3)" is an enclosure
@@ -29,27 +30,12 @@ use Calc\D;
  */
 class Enclosure extends Expression
 {
-
     /**
      * Enclosure's content.
      *
      * @var string
      */
     protected $content;
-
-    /**
-     * This a a type that is specific to the Power object.
-     *
-     * A power object type can be either "base", "exponent", "b&e" (base and exponent)
-     * at the same time.
-     *
-     * e.g. 5^2^3
-     *
-     * In the following example, 5 is a "base", 2 is "b&e", and 3 is an "exponent".
-     *
-     * @var string
-     */
-    protected $powerType;
 
     /**
      * Enclosure type.
@@ -62,42 +48,14 @@ class Enclosure extends Expression
     protected $enclosureType;
 
     /**
-     * Enclosure class
-     *
-     * e.g. term, factor, or power
-     *
-     * @var integer
-     */
-    protected $enclosureClass;
-
-    /**
-     * The type of current factor.
-     *
-     * In case the current object's type is "denominator", this variable would,
-     * indicate the type of denominator
-     *
-     * e.g.
-     *
-     * - natural,
-     * - integer,
-     * - decimal,
-     * - variable,
-     * - power
-     *
-     * @var string
-     */
-    protected $factorType;
-
-    /**
      * Get enclosure type.
      *
-     * e.g. whether "parentheses" or "brackets"
+     * E.g. whether "parentheses" or "brackets"
      *
      * @return integer
      */
     protected function getEnclosureType()
     {
-        //D::expect($this->expression, 0);
         if (preg_match(RX::PARENTHESES_START, $this->expression) === 1) {
             return K::PARENTHESES;
         }
@@ -105,18 +63,6 @@ class Enclosure extends Expression
             return K::BRACKETS;
         }
         throw new \UnexpectedValueException('Enclosure "type" resolution failed.');
-    }
-
-    /**
-     * Get enclosure class.
-     *
-     * e.g. term, factor, or power.
-     *
-     * @return integer
-     */
-    public function getEnclosureClass()
-    {
-        return $this->enclosureClass;
     }
 
     /**
@@ -155,85 +101,17 @@ class Enclosure extends Expression
     }
 
     /**
-     * Get the power type.
-     *
-     * e.g. "base", "exponent", "b&e" (base and exponent)
-     *
-     * @return string
-     */
-    public function getPowerType()
-    {
-        return $this->powerType;
-    }
-
-    /**
-     * Set the power type.
-     *
-     * e.g. "base", "power", "b&e" (base and exponent)
-     *
-     * @param string $type Power type.
-     *
-     * @return void
-     */
-    public function setPowerType($type)
-    {
-        $this->powerType = $type;
-    }
-
-    /**
-     * Get the factor's type.
-     *
-     * If this Enclosure object type is "fraction".
-     * Then, the "factor type" will give us its real type which is "enclosure".
-     *
-     * @return string
-     */
-    public function getFactorType()
-    {
-        return $this->factorType;
-    }
-
-    /**
      * Get a version of the expression without the complexity of enclosures.
      *
      * @return string
      */
-    public function getSimplifiedExp() {
+    public function getSimplifiedExp()
+    {
         $suffix = $this->type === K::FRACTION ? '/' : '';
         if ($this->isNegative) {
             $suffix .= '-';
         }
         return  $suffix . '@';
-    }
-
-    /**
-     * Set the factor's type.
-     *
-     * e.g.
-     *
-     * - natural,
-     * - integer,
-     * - decimal,
-     * - variable,
-     * - power
-     *
-     * @param string $type
-     */
-    public function setFactorType(int $type)
-    {
-        $this->factorType = $type;
-    }
-
-    /**
-     * Set enclosure's class.
-     *
-     * @param integer $class represents the class
-     *
-     * @return void
-     */
-    public function setEnclosureClass($class)
-    {
-        $this->enclosureClass = $class;
     }
 
     /**

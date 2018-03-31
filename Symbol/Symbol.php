@@ -3,12 +3,11 @@
 /**
  * PHP version 7.x
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
+ * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
- * @link     https://book.cakepcompohp.org/3.0/en/core-libraries/app.html#loading-vendor-files
  */
 
 namespace Calc\Symbol;
@@ -19,15 +18,14 @@ use Calc\RX;
 /**
  * Symbol class.
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
- * @license  Crownless King Network
+ * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
 abstract class Symbol
 {
-
     /**
      * Filtered expression
      *
@@ -64,6 +62,7 @@ abstract class Symbol
     protected $parentIndex;
 
     /**
+     * Expression's tag.
      *
      * @var string
      */
@@ -146,17 +145,25 @@ abstract class Symbol
      */
     public function getTokens()
     {
-        return $this->tokens;
+        if ($this->tokens) {
+            return $this->tokens;
+        }
+        $m = "the \"tokens\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
     /**
      * Get the parent symbol.
      *
-     * @return object
+     * @return integer
      */
     public function getParentIndex()
     {
-        return $this->parentIndex;
+        if ($this->parentIndex) {
+            return $this->parentIndex;
+        }
+        $m = "the \"parent's index\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
     /**
@@ -166,7 +173,11 @@ abstract class Symbol
      */
     public function getTag()
     {
-        return $this->tag;
+        if (isset($this->tag)) {
+            return $this->tag;
+        }
+        $m = "the \"tag\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
     /**
@@ -176,7 +187,11 @@ abstract class Symbol
      */
     public function getType()
     {
-        return $this->type;
+        if (isset($this->type)) {
+            return $this->type;
+        }
+        $m = "the \"type\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
     /**
@@ -189,17 +204,29 @@ abstract class Symbol
      */
     public function getStatus()
     {
-        return $this->status;
+        if (isset($this->status)) {
+            return $this->status;
+        }
+        $m = "the \"status\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
     /**
-     * Get index
+     * Get index.
+     *
+     * The index of this object in the math sheet's step array.
+     *
+     * @see \Calc\Math\Sheet
      *
      * @return integer
      */
     public function getIndex()
     {
-        return $this->index;
+        if (isset($this->index)) {
+            return $this->index;
+        }
+        $m = "the \"index\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
     /**
@@ -208,15 +235,24 @@ abstract class Symbol
      * The signature is a string representing the reorganized (by alphabetical
      * order) sub-symbols.
      * This is done so that similar expression with the same variables or numbers
-     * can be recognized even the sub-symbols order differs.
+     * can be recognized even if the sub-symbols order differs.
      *
      * @return string
      */
     public function getSignature()
     {
-        return $this->signature;
+        if ($this->signature) {
+            return $this->signature;
+        }
+        $m = "the \"signature\" for object \"{$this->expression}\" is not set yet.";
+        throw new \LogicException($m);
     }
 
+    /**
+     * Returns true if this expression was identified properly.
+     *
+     * @return bool
+     */
     public function isIdentified()
     {
         switch ($this->type) {
@@ -238,7 +274,7 @@ abstract class Symbol
     public function getSimplifiedExp()
     {
         if (!isset($this->simplifiedExp)) {
-            $this->simplifiedExp = $this->expression;
+            return $this->expression;
         }
         return $this->simplifiedExp;
     }
@@ -268,11 +304,13 @@ abstract class Symbol
     /**
      * Set a reference to parent object.
      *
-     * @param object $index parent object
+     * @param integer $index parent object
+     *
+     * @return void
      */
     public function setParentIndex($index)
     {
-        $this->parentIndex = & $index;
+        $this->parentIndex = $index;
     }
 
     /**
@@ -290,7 +328,7 @@ abstract class Symbol
     /**
      * Set the symbol type.
      *
-     * @param string $type
+     * @param integer $type integer representing the current expression's type.
      *
      * @return void
      */
@@ -302,25 +340,39 @@ abstract class Symbol
     /**
      * Set the symbol's status.
      *
-     * @param string $status the symbol's evaluation status
+     * @param integer $status the symbol's evaluation status
      *
      * @return void
      */
-    public function setStatus(string $status)
+    public function setStatus($status)
     {
         $this->status = $status;
     }
 
+    /**
+     * Set expression's signature.
+     *
+     * @param string $signature signature
+     *
+     * @return void
+     */
     public function setSignature(string $signature)
     {
         $this->signature = $signature;
     }
 
+    /**
+     * Set the symbol object's index.
+     *
+     * @param integer $index Symbol's object index in the main data structure.
+     *
+     * @return void
+     */
     public function setIndex($index)
     {
         $this->index = $index;
     }
- 
+
     /**
      * Handle Symbol objects casting to string.
      *
@@ -334,8 +386,9 @@ abstract class Symbol
     /**
      * Symbol constructor
      *
-     * @param string $exp    expression
-     * @param Symbol $symbol object
+     * @param string $exp expression
+     *
+     * @return void
      */
     function __construct(string $exp)
     {
