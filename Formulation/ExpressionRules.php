@@ -23,5 +23,6 @@ namespace Calc\Formulation;
  */
 class ExpressionRules
 {
-    const BEFORE_EXPRESSION_PARSE = [];
+    const BEFORE_PARSE_DEFAULT = [];
+
 }

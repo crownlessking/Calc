@@ -22,8 +22,8 @@ use Calc\RX;
  *
  * E.g. "(5+3)" is an enclosure
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessing/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com

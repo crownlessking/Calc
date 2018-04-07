@@ -12,6 +12,9 @@
 
 namespace Calc\Formulation;
 
+use Calc\K;
+use Calc\Symbol\Expression;
+
 /**
  * Formulation class.
  *
@@ -27,7 +30,7 @@ class Formulation
 
     /**
      * Helper function for _extractGetVal().
-     * 
+     *
      * Extract token from an expression. e.g. 5+3
      * In the previous example, "5" and "3" are tokens and would be extracted.
      *
@@ -117,11 +120,11 @@ class Formulation
     }
 
     /**
-     * Plugs the tokens extracted from the expression into the formula or 
+     * Plugs the tokens extracted from the expression into the formula or
      * blueprint of the new form.
      *
      * E.g.
-     * 
+     *
      * equation: a^2-b^2 = (a+b)*(a-b)
      * $trans = (a+b)*(a-b)
      * $values = [
@@ -182,6 +185,251 @@ class Formulation
         $trans = self::_transform($template, $values);
 
         return $trans;
+    }
+
+    /**
+     * Combine two terms using the right operator (+ or -).
+     *
+     * @param string $strA operand a
+     * @param string $strB operand b
+     *
+     * @return string
+     */
+    public static function glueTerms($strA, $strB)
+    {
+        $glue = (preg_match(\Calc\RX::NEGATION_START, $strB) === 1) ? '' : '+';
+
+        return $strA . $glue . $strB;
+    }
+
+    /**
+     * Check if rewrite rule applies to symbol object.
+     *
+     * Returns true if it does.
+     *
+     * @param object $obj  symbol object
+     * @param array  $rule rewrite rules
+     *
+     * @return boolean
+     */
+    private static function _restrictOk($obj, $rule)
+    {
+        if (!isset($rule['restrict']) || empty($rule['restrict'])) {
+            return true;
+        }
+        $restrict = $rule['restrict'];
+        $j = 0;
+        do {
+            if ($obj->getType() === $restrict[$j]) {
+                return true;
+            }
+            $j++;
+        } while ($j < count($restrict));
+
+        return false;
+    }
+
+    /**
+     * Executes callback.
+     *
+     * @param string  $callback callback function name
+     * @param integer $type     operation type
+     * @param object  $obj      symbol object
+     *
+     * @return string
+     *
+     * @throws \InvalidArgumentException
+     */
+    private static function _run($callback, $type, $obj)
+    {
+        switch ($type) {
+        case K::TERM:
+        case K::TERM_ENCLOSURE:
+        case K::TERM_OPERATION:
+            return TermRules::$callback($obj);
+        case K::FACTOR:
+        case K::FACTOR_ENCLOSURE:
+        case K::FACTOR_OPERATION:
+            return FactorRules::$callback($obj);
+        case K::POWER:
+        case K::POWER_ENCLOSURE:
+        case K::POWER_OPERATION:
+            return PowerRules::$callback($obj);
+        }
+
+        $m = 'Invalid type "' . K::getDesc($type) . '"';
+        throw new \InvalidArgumentException($m);
+    }
+
+    /**
+     * Rewrite or cause the submitted expression to change form.
+     *
+     * Applies rewrite rule to Symbol object then returns the resulting rewrite
+     * string.
+     *
+     * @param array   $array array containing rules
+     * @param object  $obj   symbol object containing expression which will
+     *                       change form.
+     * @param integer $type  indicates the type of rewrite.
+     *
+     * @return string
+     */
+    private static function _applyRule($array, $obj, $type)
+    {
+        $count = count($array);
+        $str = (string) $obj;
+        for ($j = 0; $j < $count; $j++) {
+            $rule = $array[$j];
+            if (Formulation::_restrictOk($obj, $rule)
+                && preg_match($rule['regex'], $str) === 1
+            ) {
+                if (isset($rule['equation'])) {
+                    return Formulation::rewrite($rule['equation'], $obj);
+                } else if (isset($rule['callback'])) {
+                    return Formulation::_run($rule['callback'], $type, $obj);
+                }
+                $m = "Malformed formulation rule\n";
+                $m .= 'rule = ' . print_r($rule, true);
+                throw new \InvalidArgumentException($m);
+            }
+
+        }
+        return $str;
+    }
+
+    /**
+     * Applies formula to a term.
+     * 
+     * @param object $obj symbol object
+     * @param integer $op    name of array containing the set of rules which
+     *                       will be used to rewrite the expression.
+     *
+     * @see \Calc\Formulation\TermRules
+     *
+     * @link https://stackoverflow.com/questions/1005857/how-to-call-php-function-from-string-stored-in-a-variable
+     *
+     * @return string
+     */
+    public static function rewriteTerm($obj, $op = 'BEFORE_PARSE_DEFAULT')
+    {
+        $rules = constant("Calc\\Formulation\\TermRules::{$op}");
+        $rewrite = Formulation::_applyRule($rules, $obj, K::TERM);
+
+        return $rewrite;
+    }
+
+    /**
+     * Applies formula to a term operation, two term that are computed.
+     *
+     * @param string  $opStr operation string
+     * @param integer $op    name of array containing the set of rules which
+     *                       will be used to rewrite the expression.
+     *
+     * @see \Calc\Formulation\TermRules
+     *
+     * @return string
+     */
+    public static function rewriteTermOp($opStr, $op = 'OPERATIONS_DEFAULT')
+    {
+        $exp = new Expression($opStr);
+        $exp->setType(K::TERM_OPERATION);
+        $rules = constant("Calc\\Formulation\\TermRules::{$op}");
+        $rewrite = Formulation::_applyRule($rules, $exp, K::TERM_OPERATION);
+
+        return $rewrite;
+    }
+
+    /**
+     * May change the form of the submitted factor if any rule is found to apply
+     * the expression it represents.
+     *
+     * @param object  $obj   symbol object
+     * @param integer $op    name of array containing the set of rules which
+     *                       will be used to rewrite the expression.
+     *
+     * @see \Calc\Formulation\FactorRules
+     *
+     * @return string
+     */
+    public static function rewriteFactor($obj, $op = 'BEFORE_PARSE_DEFAULT')
+    {
+        $rules = constant("Calc\\Formulation\\FactorRules::{$op}");
+        $rewrite = Formulation::_applyRule($rules, $obj, K::FACTOR);
+
+        return $rewrite;
+    }
+
+    /**
+     * May change the form of the operation on two factors.
+     *
+     * These two factor operands will be combined into one expression and then,
+     * that expression form may change based on matching mathematical rules.
+     *
+     * @param string  $opStr expression representing the computation of two
+     *                       factors.
+     * @param integer $op    name of array containing the set of rules which
+     *                       will be used to rewrite the expression.
+     *
+     * @see \Calc\Formulation\FactorRules
+     *
+     * @return string
+     */
+    public static function rewriteFactorOp($opStr, $op = 'OPERATIONS_DEFAULT')
+    {
+        $exp = new Expression($opStr);
+        $exp->setType(K::FACTOR_OPERATION);
+        $rules = constant("Calc\\Formulation\\FactorRules::{$op}");
+        $rewrite = Formulation::_applyRule($rules, $exp, K::FACTOR_OPERATION);
+
+        return $rewrite;
+    }
+
+    /**
+     * May change the form of a number which is either a base or an exponent.
+     *
+     * E.g. in "5^3" the parameter may represent either the "5" or the "3"
+     *               which are Power objects.
+     *
+     * @param object  $obj symbol object containing the expression to be
+     *                     rewritten.
+     * @param integer $op  name of array containing the set of rules which
+     *                     will be used to rewrite the expression.
+     *
+     * @see \Calc\Formulation\PowerRules
+     *
+     * @return string
+     */
+    public static function rewritePower($obj, $op = 'BEFORE_PARSE_DEFAULT')
+    {
+        $rules = constant("Calc\\Formulation\\PowerRules::{$op}");
+        $rewrite = Formulation::_applyRule($rules, $obj, K::POWER);
+
+        return $rewrite;
+    }
+
+    /**
+     * May change the form of an expression representing the operation of a
+     * base raised to a power.
+     *
+     * If the expression matches a rule, then, it will be rewritten.
+     *
+     * @param string  $opStr expression representing the operation of a base
+     *                       raised to a power. E.g. "5^3"
+     * @param integer $op    name of array containing the set of rules which
+     *                       will be used to rewrite the expression.
+     *
+     * @see \Calc\Formulation\PowerRules
+     *
+     * @return string
+     */
+    public static function rewritePowerOp($opStr, $op = 'OPERATIONS_DEFAULT')
+    {
+        $exp = new Expression($opStr);
+        $exp->setType(K::POWER_OPERATION);
+        $rules = constant("Calc\\Formulation\\PowerRules::{$op}");
+        $rewrite = Formulation::_applyRule($rules, $exp, K::POWER_OPERATION);
+
+        return $rewrite;
     }
 
 }

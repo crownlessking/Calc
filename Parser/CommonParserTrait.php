@@ -29,8 +29,8 @@ use Calc\Math\Sheet;
 trait CommonParserTrait
 {
     /**
-     * Returns true if the token is an expression in parentheses. Otherwise,
-     * returns false.
+     * Returns true if the token is an expression in parentheses or brackets.
+     * Otherwise, returns false.
      *
      * @param string $token represents an expression
      *

@@ -57,13 +57,16 @@ class K
      */
     const SELECTED = 5;
 
-    const LIKE_TERM   = 6;
-
     /**
      * Enclosure delimiter.
      */
     const PARENTHESES = 7;
     const BRACKETS    = 8;
+
+    const LIKE_TERM = 9;
+    const TERM_OPERATION = 10;
+    const FACTOR_OPERATION = 11;
+    const POWER_OPERATION = 12;
 
     const CONSTANT = 100;
     const NATURAL = 101;
@@ -96,9 +99,7 @@ class K
         'undetermined' => K::UNDETERMINED,
         'none' => K::NONE,
         'success' => K::SUCCESS,
-
-
-
+        'like_term' => K::LIKE_TERM,
         'constant' => K::CONSTANT,
         'natural'  => K::NATURAL,
         'integer'  => K::INTEGER,
@@ -115,7 +116,6 @@ class K
         'b&e' => K::B_AND_E,
         'exponent' => K::EXPONENT,
         'denominator' => K::DENOMINATOR,
-
         'term_enclosure' => K::TERM_ENCLOSURE,
         'factor_enclosure' => K::FACTOR_ENCLOSURE,
         'power_enclosure' => K::POWER_ENCLOSURE
@@ -128,13 +128,21 @@ class K
      *
      * @return string
      */
-    public static function getDesc($constant)
+    public static function _getDesc($constant)
     {
         $flipped = array_flip(K::DESC);
         if (isset($flipped[$constant])) {
             return $flipped[$constant];
         }
-        return 'n/a';
+        return "n/a($constant)";
+    }
+
+    public static function getDesc($constant)
+    {
+        $class = new \ReflectionClass(__CLASS__);
+        $ks = array_flip($class->getConstants());
+
+        return $ks[$constant];
     }
 
     /**

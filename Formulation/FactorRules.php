@@ -4,7 +4,7 @@
  * PHP version 7.x
  *
  * @category API
- * @package  Calc
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
@@ -12,8 +12,7 @@
 
 namespace Calc\Formulation;
 
-
-use Calc\RX;
+use Calc\K;
 
 /**
  * Convert
@@ -21,26 +20,25 @@ use Calc\RX;
  * [List of keys]
  *
  * @category API
- * @package  Calc
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
 class FactorRules
 {
-    const BEFORE_FACTOR_PARSE = [
-        '-a' => [
-            'match' => '-a = -1*a',
-            'types' => ['variable'],
+    const BEFORE_PARSE_DEFAULT = [
+        [
+            'equation' => '-a = -1*a',
+            'restrict' => [K::VARIABLE],
             'regex' => '~-[a-z]~'
-        ],
-
-        '/-a' => [
+        ],[
             'equation' => '/-a = /(-1*a)',
-            'types' => ['fraction'],
+            'restrict' => [K::FRACTION],
             'factor_types' => ['variable'],
             'regex' => '~\/-[a-z]~'
         ]
     ];
 
+    const FACTOR_OPERATIONS = [];
 }

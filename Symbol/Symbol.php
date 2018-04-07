@@ -256,7 +256,9 @@ abstract class Symbol
     public function isIdentified()
     {
         switch ($this->type) {
-        case K::ENCLOSURE:
+        case K::TERM_ENCLOSURE:
+        case K::FACTOR_ENCLOSURE:
+        case K::POWER_ENCLOSURE:
         case K::NATURAL:
         case K::INTEGER:
         case K::DECIMAL:

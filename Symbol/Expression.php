@@ -3,8 +3,8 @@
 /**
  * PHP version 5.4
  *
- * @category App
- * @package  Clkcalc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <rking@crownlessking.com>
  * @license  Private <http://www.crownlessking.com>
  * @link     http://www.crownlessking.com
@@ -17,8 +17,8 @@ use Calc\Math\Sheet;
 /**
  * Expression class
  *
- * @category App
- * @package  Clkcalc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <rking@crownlessking.com>
  * @license  Private <http://www.crownlessking.com>
  * @link     http://www.crownlessking.com

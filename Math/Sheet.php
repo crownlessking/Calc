@@ -44,19 +44,31 @@ class Sheet
      * @var array
      */
     private static $_sheet = [
+
+        /**
+         * List of all mathematical steps.
+         * A step is an array containing a list of symbol object which were
+         * generated from string tokens. As in, these tokens were converted to
+         * Term, Factor, Power, Enclosure object.
+         * See the files within the "Symbol" folder of the project.
+         */
         'steps' => [],
+
+        /**
+         * In this array, the indexes of symbol objects with the same tag will
+         * be grouped together.
+         */
         'tags'  => [],
         'tags_by_signature' => []
     ];
 
     /**
-     * Index of the current operation dataset.
+     * Index of the current step dataset.
      *
-     * The data of each operation will be segmented in their own array. This
-     * variable is the index of the data array that is currently work on.
-     * This variable is the index in $analysis["steps"] array.
+     * This dataset is an array containing a list of symbol object which were
+     * generated from string tokens when the expression was parsed.
      *
-     * @see $analysis["steps"]
+     * @see $_sheet
      *
      * @var integer
      */
@@ -83,7 +95,22 @@ class Sheet
      */
     private static $_cStep = -1;
 
+    /**
+     * Index of operand A of the operation
+     *
+     * This is the index location of a symbol object within the checkpoint step.
+     *
+     * @var integer
+     */
     private static $_a_id = -1;
+
+    /**
+     * Index of the operand B of the operation.
+     *
+     * This is the index location of a symbol object within the checkpoint step.
+     *
+     * @var integer
+     */
     private static $_b_id = -1;
 
     /**
@@ -95,14 +122,26 @@ class Sheet
      */
     public static function select($index)
     {
-        return self::$_sheet['steps'][self::$_step][$index];
+        if (isset(self::$_sheet['steps'][self::$_step][$index])) {
+            return self::$_sheet['steps'][self::$_step][$index];
+        } else {
+            $step = self::$_step - 1;
+            while ($step < 0) {
+                if (isset(self::$_sheet['steps'][$step][$index])) {
+                    return self::$_sheet['steps'][$step][$index];
+                }
+                $step--;
+            }
+        }
+        $m = 'Index "' . $index . '" does not exist.';
+        throw new \InvalidArgumentException($m);
     }
 
     /**
-     * Insert a new Symbol object into a step and then returns the id of the
+     * Insert a new symbol object into a step and then returns the id of the
      * newly inserted symbol.
      *
-     * @param object $obj Symbol object
+     * @param object $obj symbol object
      *
      * @return integer
      */
@@ -137,14 +176,21 @@ class Sheet
      */
     public static function delete($obj)
     {
-        // TODO needs to be implemented.
-        //      Child objects need to be removed also
+        $index = $obj->getIndex();
+
+        $step = self::$_sheet['steps'][self::$_step];
+        foreach ($step as $o) {
+            if ($o->getParentIndex() === $index) {
+                self::delete($o);
+            }
+        }
+        unset(self::$_sheet['steps'][self::$_step][$index]);
     }
 
     /**
      * Group symbol indexes by tag.
      *
-     * @param object $obj Symbol object
+     * @param object $obj symbol object
      *
      * @return void
      */
@@ -200,198 +246,126 @@ class Sheet
     }
 
     /**
-     * Generates an array containing the result of the operation to be inserted
-     * in the new step.
+     * Synchronizes array keys.
      *
-     * @param integer $aId index of the first operand
-     * @param integer $bId index of the second operand
-     * @param object  $obj Symbol object (computation result)
+     * Will set the objects contained in the array parameter to their proper
+     * keys.
      *
-     * @return array
-     */
-    private static function _updateStepGetReplacement($aId, $bId = -1, $obj = null)
-    {
-        if ($obj !== null) {
-            $replacement = [$obj];
-        } else if ($aId >= 0 && $bId >= 0) {
-            $a = self::select($aId);
-            $b = self::select($bId);
-            $replacement = [$a, $b];
-        } else {
-            $a = self::select($aId);
-            $replacement = [$a];
-        }
-        return $replacement;
-    }
-
-    /**
-     * Set the index inner values of the Symbol object to replace the first
-     * operand which was consumed in the computation process.
-     *
-     * The resulting object will basically take the place of the first operand.
-     *
-     * @param integer $index operand's index
-     * @param object  $obj   Symbol object resulting from the operands
-     *                       computation or modification.
-     *
-     * @return void
-     */
-    private static function _updateStepSetObjIndexes($index, & $obj)
-    {
-        $temp = self::select($index);
-        $obj->setParentIndex($temp->getParentIndex());
-        $obj->setIndex(self::$_id);
-        self::$_id++;
-    }
-
-    /**
-     * Restore the "steps" array original keys which were lost in the splicing
-     * process.
-     *
-     * Note: If a better solution than array_splice() is found which preserves
-     *       the step's original keys then this function would be obsolete.
-     *
-     * @param array $checkpoint "steps" array before the operation
-     *
-     * @see array_splice()
+     * @param array $new new user-defined array of object to be merged in
+     *                   checkpoint step.
      *
      * @return array
      */
-    private static function _updateStepRestoreKeys(array $checkpoint)
+    private static function _setIndexes(array $new)
     {
         $array = [];
-        foreach ($checkpoint as $obj) {
-            $array[$obj->getIndex()] = $obj;
+        foreach ($new as $obj) {
+            $obj->setIndex(self::$_id);
+            $array[self::$_id] = $obj;
+            self::$_id++;
         }
         return $array;
     }
 
     /**
-     * Creates a new step by included the changes made to a single operand.
+     * Merges the new user-defined array of values into an existing step array.
      *
-     * This function is similar to the other "updateStep" functions except that
-     * it only takes into account the changes made to a single operand.
+     * This function handles the process in which an expression has mutated as a
+     * result previous operations and new symbol objects are introduced.
      *
-     * e.g. The operand could have been rewritten by a formula.
+     * E.g. 5^2+3 can mutate into 5*5+3
+     *      In this case, both "5" * "5" factors would be new symbol objects.
      *
-     * @param array   $checkpoint "steps" array before the operation
-     * @param integer $aId        index of the operand
-     * @param object  $obj        object resulting from operand modification
+     * @param array   $step  previous array of symbol objects.
+     * @param integer $index index of new array insertion in the step
+     * @param array   $new   new array to be inserted.
      *
      * @return array
      */
-    private static function _updateStepA(array & $checkpoint, $aId, $obj = null)
+    private static function _insertStep(array $step, $index, array $new)
     {
-        $arrayKeys = array_keys($checkpoint);
-        $a_index = array_search($aId, $arrayKeys);
-        self::_updateStepSetObjIndexes($aId, $obj);
-        $replacement = self::_updateStepGetReplacement($aId, -1, $obj);
-        array_splice($checkpoint, $a_index, 1, $replacement);
-
-        return self::_updateStepRestoreKeys($checkpoint);
+        $count = count($step);
+        if (0 < $index && $index < ($count-1)) {
+            $partA = array_slice($step, 0, $index, true);
+            $partB = array_slice($step, $index+1, $count-$index-1, true);
+            return $partA + $new + $partB;
+        } else if ($index === 0) {
+            return $new + array_slice($step, 1, null, true);
+        } else if ($index === ($count-1)) {
+            return array_slice($step, 0, $count-$index-1, true) + $new;
+        }
+        $m = 'possible bad values: $count='.$count.' or $index=' . $index;
+        throw new \OutOfBoundsException($m);
     }
 
     /**
-     * Creates a new step by updating the two operands with the computation
-     * result.
+     * Update the "step" array.
      *
-     * This function will remove the two operands which were computed, and
-     * replace them with the result in the new step.
+     * @param array   $step step array
+     * @param integer $aId  index of first operand
+     * @param integer $bId  index of second operand
+     * @param array   $new  array to be inserted
      *
-     * @param array   $checkpoint "steps" array before the operation
-     * @param integer $aId        index of the first operand
-     * @param integer $bId        index of the second operand
-     * @param object  $obj        resulting object from operand computation that
-     *                            will be merged back into the step update.
-     *
-     * @return array new step
+     * @return array
      *
      * @throws \LogicException
      */
-    private static function _updateStepAandB(array & $checkpoint, $aId, $bId, $obj = null)
+    private static function _updateStep(array $step, $aId, $bId, array $new)
     {
-        $arrayKeys = array_keys($checkpoint);
+        $arrayKeys = array_keys($step);
         $a_index = array_search($aId, $arrayKeys);
-        $b_index = array_search($bId, $arrayKeys);
+        $b_index = ($bId >= 0) ? array_search($bId, $arrayKeys) : 2147483647;
 
         if ($a_index < $b_index) {
-            self::_updateStepSetObjIndexes($aId, $obj);
-            $replacement = self::_updateStepGetReplacement($aId, $bId, $obj);
-            array_splice($checkpoint, $a_index, 1, $replacement);
-            array_splice($checkpoint, $b_index, 1);
-            return self::_updateStepRestoreKeys($checkpoint);
+            if ($bId >= 0) {
+                unset($step[$b_index]);
+            }
+            return self::_insertStep($step, $a_index, $new);
         } else if ($a_index > $b_index) {
-            self::_updateStepSetObjIndexes($bId, $obj);
-            $replacement = self::_updateStepGetReplacement($aId, $bId, $obj);
-            array_splice($checkpoint, $b_index, 1, $replacement);
-            array_splice($checkpoint, $a_index, 1);
-            return self::_updateStepRestoreKeys($checkpoint);
+            unset($step[$a_index]);
+            return self::_insertStep($step, $b_index, $new);
         }
-        $m = "Uh ho! Something went wrong when merging the steps\n";
-        $m .= " a_index = $a_index | b_index = $b_index";
-        throw new \LogicException($m);
-    }
 
-    /**
-     * Creates a new step as the result of the computation or modification of
-     * the selected operands.
-     *
-     * @param array   $checkpoint "steps" array before the operation
-     * @param integer $aId        index of the first operand
-     * @param integer $bId        index of the second operand
-     * @param object  $obj        object which resulted from the computation of both
-     *                            operands. It will inserted in the new step.
-     *
-     * @return array
-     */
-    private static function _updateStep(array & $checkpoint, $aId, $bId = -1, $obj = null)
-    {
-        if ($bId >= 0) {
-            $updateArray = self::_updateStepAandB($checkpoint, $aId, $bId, $obj);
-            return $updateArray;
-        } else {
-            $updateArray = self::_updateStepA($checkpoint, $aId, $obj);
-            return $updateArray;
-        }
+        $m = "Something went wrong...\n";
+        $m .= '$a_index='."$a_index\n";
+        $m .= '$b_index='."$b_index\n";
+        $m .= '$array='.print_r($step, true);
+        throw new \LogicException($m);
     }
 
     /**
      * Creates a new step (or merge step).
      *
-     * A step is an array which holds a list of Symbol objects. These objects
+     * A step is an array which holds a list of symbol objects. These objects
      * represent numbers in an expression.
      * In each consecutive step, two operands of the previous step have been
-     * computed and merged into a single Symbol.
+     * computed and merged into a single symbol.
      * This represents the natural progression that occurs when solving an
      * expression to find its solution.
      * This methodology also enable us to view each step which was taken to find
      * the solution.
      *
-     * @param object $obj computation result. It will be included in the new
-     *                    step.
+     * @param array $array computation result. It will be included in the new
+     *                     step.
      *
      * @return void
      */
-    public static function newStep($obj = null)
+    public static function newStep(array $array = [])
     {
-        if (self::$_cStep >= 0) {
+        if (self::$_cStep >= 0 && !empty($array)) {
             $checkpoint = self::$_sheet['steps'][self::$_cStep];
-            $update = self::_updateStep($checkpoint, self::$_a_id, self::$_b_id, $obj);
-            self::$_step++;
-            self::$_sheet['steps'][self::$_step] = $update;
+            $new = self::_setIndexes($array);
+            $newStep = self::_updateStep($checkpoint, self::$_a_id, self::$_b_id, $new);
             self::$_cStep = -1;
             self::$_a_id = -1;
             self::$_b_id = -1;
+        } else if (!empty($array)) {
+            $newStep = self::_setIndexes($array);
         } else {
-            $array = [];
-            if ($obj !== null) {
-                $obj->setIndex(self::$_id);
-                $array[self::$_id] = $obj;
-                self::$_id++;
-            }
-            self::$_step++;
-            self::$_sheet['steps'][self::$_step] = $array;
+            $newStep = $array;
         }
+        self::$_step++;
+        self::$_sheet['steps'][self::$_step] = $newStep;
     }
 
     /**
@@ -433,6 +407,16 @@ class Sheet
     public static function getAnalysisData()
     {
         return self::$_sheet;
+    }
+
+    /**
+     * Get the index of the last step.
+     *
+     * @return integer
+     */
+    public static function getLastStepIndex()
+    {
+        return self::$_step;
     }
 
     /**

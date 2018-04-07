@@ -13,42 +13,6 @@
 namespace Calc;
 
 /**
- * Missing content type exception definition
- *
- * @category API
- * @package  Crownlessking/Calc
- * @author   Riviere King <rking@geniuscove.com>
- * @license  N/A <no.license.yet@geniuscove.com>
- * @link     http://www.crownlessking.com
- */
-class DebuggingException extends \Exception
-{
-    /**
-     * Constructor
-     *
-     * @param string     $message  exception message
-     * @param integer    $code     exception code
-     * @param \Exception $previous previous exception
-     *
-     * @return void
-     */
-    public function __construct($message, $code = 0, \Exception $previous = null)
-    {
-        parent::__construct($message, $code, $previous);
-    }
-
-    /**
-     * Exception string conversion
-     *
-     * @return string
-     */
-    public function __toString()
-    {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
-
-/**
  * Debugging class.
  *
  * @category API
@@ -134,7 +98,7 @@ class D
      *
      * @return array
      */
-    public static function analysisDump($steps, $index = 0)
+    public static function getAnalysisDump($steps, $index = 0)
     {
         $data = [];
         $step = $steps[$index];
@@ -198,4 +162,40 @@ class D
         }
     }
 
+}
+
+/**
+ * Missing content type exception definition
+ *
+ * @category API
+ * @package  Crownlessking/Calc
+ * @author   Riviere King <rking@geniuscove.com>
+ * @license  N/A <no.license.yet@geniuscove.com>
+ * @link     http://www.crownlessking.com
+ */
+class DebuggingException extends \Exception
+{
+    /**
+     * Constructor
+     *
+     * @param string     $message  exception message
+     * @param integer    $code     exception code
+     * @param \Exception $previous previous exception
+     *
+     * @return void
+     */
+    public function __construct($message, $code = 0, \Exception $previous = null)
+    {
+        parent::__construct($message, $code, $previous);
+    }
+
+    /**
+     * Exception string conversion
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+    }
 }

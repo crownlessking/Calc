@@ -4,7 +4,7 @@
  * PHP version 7.x
  *
  * @category API
- * @package  Calc
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
@@ -14,12 +14,13 @@
 namespace Calc;
 
 use Calc\Parser\Parser;
+use Calc\Math\Sheet;
 
 /**
  * Calc class.
  *
  * @category API
- * @package  Calc
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
@@ -161,12 +162,13 @@ class Calc
         self::_initialize($expression);
         $exp = Parser::analyze(self::$_expression);
         $data = Parser::getAnalysisData();
+        $stepIndex = Sheet::getLastStepIndex();
         return [
             "expression" => self::$_expression,
-            "objects"    => D::analysisDump($data['steps']),
+            "objects"    => D::getAnalysisDump($data['steps'], $stepIndex),
             "tags" => $data["tags"],
             "tags_by_signature" => $data["tags_by_signature"],
-            "next_tag" => \Calc\Math\Sheet::getNextTagIndex(),
+            "next_tag" => Sheet::getNextTagIndex(),
             'simplified_exp' => $exp->getSimplifiedExp()
         ];
     }

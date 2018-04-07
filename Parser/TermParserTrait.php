@@ -20,8 +20,8 @@ use Calc\Symbol\Term;
 /**
  * Calc parser.
  *
- * @category Math
- * @package  Calc
+ * @category API
+ * @package  Crownlessking/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
  * @link     http://www.crownlessking.com
@@ -277,7 +277,6 @@ trait TermParserTrait
         $term->setParentIndex($parentIndex);
         $index = Sheet::insert($term);
         $term->setIndex($index);
-        Sheet::update($term);
 
         return $term;
     }

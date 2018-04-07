@@ -23,8 +23,11 @@ namespace Calc\Formulation;
  */
 class TermRules
 {
-    const RULES = [
-        'a+b' => [
+    const BEFORE_PARSE_DEFAULT = [];
+
+    const OPERATIONS_DEFAULT = [
+        [
+            'operands' => 2,
             'callback' => 'plus'
         ]
     ];

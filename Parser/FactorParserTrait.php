@@ -3,7 +3,7 @@
 /**
  * PHP version 7.x
  *
- * @category Math
+ * @category API
  * @package  Crownlessing/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
@@ -22,7 +22,7 @@ use Calc\Symbol\Factor;
 /**
  * Calc parser.
  *
- * @category Math
+ * @category API
  * @package  Crownlessing/Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network

@@ -10,10 +10,12 @@
  * @link     http://www.crownlessking.com
  */
 
-namespace Calc\Formulation;
+namespace Calc\Math\Arithmetics;
+
+use Calc\K;
 
 /**
- * Power rules.
+ * Arithmetics common trait.
  *
  * @category API
  * @package  Crownlessking/Calc
@@ -21,9 +23,18 @@ namespace Calc\Formulation;
  * @license  N/A <no.license.yet@crownlessking.com>
  * @link     http://www.crownlessking.com
  */
-class PowerRules
+trait ArithmeticsCommonTrait
 {
-    const BEFORE_PARSE_DEFAULT = [];
+    private function _convert($str, $type) {
+        switch ($type) {
+        case K::DECIMAL:
+            return (float) $str;
+        case K::NATURAL:
+        case K::INTEGER:
+            return (int) $str;
+        }
+        $m = "\"$str\" could not be converted to a number";
+        throw new \LogicException($m);
+    }
 
-    const OPERATIONS_DEFAULT = [];
 }

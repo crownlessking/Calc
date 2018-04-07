@@ -78,15 +78,15 @@ trait PowerParserTrait
      *
      * @return string
      */
-    private static function _identifyPower(string $str)
+    private static function _identifyPower($str)
     {
+        if (self::_isEnclosure($str)) {
+            return K::POWER_ENCLOSURE;
+        }
         foreach (RX::POWER_SYM_DEF as $type => $regex) {
             if (preg_match($regex, $str) === 1) {
                 return K::DESC[$type];
             }
-        }
-        if (self::_isEnclosure($str)) {
-            return K::POWER_ENCLOSURE;
         }
         return K::UNKNOWN;
     }
@@ -98,7 +98,7 @@ trait PowerParserTrait
      *
      * @return \Calc\Symbol\Power|\Calc\Symbol\PowerEnclosure
      */
-    private static function _newPower(string $str)
+    private static function _newPower($str)
     {
         $type = self::_identifyPower($str);
         switch ($type) {

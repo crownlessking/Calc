@@ -3,7 +3,7 @@
 /**
  * PHP version 7.x
  *
- * @category Math
+ * @category API
  * @package  Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
@@ -18,7 +18,7 @@ use Calc\Math\Sheet;
 /**
  * Calc parser.
  *
- * @category Math
+ * @category API
  * @package  Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  Crownless King Network
@@ -31,6 +31,60 @@ class Parser
     use PowerParserTrait;
     use FactorParserTrait;
     use TermParserTrait;
+
+    /**
+     * Get an array of strings representing powers.
+     *
+     * Breaks up the factor into "base" and "power".
+     *
+     * E.g. "5^3" breaks into ["5","3"]
+     *
+     * @param string $factorStr string representing a factor
+     *
+     * @return array
+     */
+    public static function getPowerTokens($factorStr)
+    {
+        $array = self::_getPowerTokens($factorStr);
+
+        return $array;
+    }
+
+    /**
+     * Get an array of strings representing factors.
+     *
+     * Breaks the term string into factors if it is made of factors.
+     *
+     * E.g. "5*3" breaks into ["5","3"]
+     *
+     * @param string $termStr string representing a term
+     *
+     * @return array
+     */
+    public static function getFactorTokens($termStr)
+    {
+        $array = self::_getFactorTokens($termStr);
+
+        return $array;
+    }
+
+    /**
+     * Get array of strings representing terms.
+     *
+     * Breaks up the expression string into terms.
+     *
+     * e.g. "5+3" breaks into ["5","3"]
+     *
+     * @param string $expStr string representing an expression
+     *
+     * @return array
+     */
+    public static function getTermTokens($expStr)
+    {
+        $array = self::_getTermTokens($expStr);
+
+        return $array;
+    }
 
     /**
      * Get symbol object's real type always.
@@ -68,7 +122,7 @@ class Parser
      *
      * @return array
      */
-    private static function _savePowers($tokens, $factor)
+    public static function savePowers($tokens, $factor)
     {
         $cntr = 0;
         $count = count($tokens);
@@ -102,7 +156,7 @@ class Parser
      *
      * @return array
      */
-    private static function _saveFactors($tokens, $term)
+    public static function saveFactors($tokens, $term)
     {
         $indexes = [];
         foreach ($tokens as $token) {
@@ -114,7 +168,7 @@ class Parser
             case K::POWER:
                 $indexes[] = Sheet::insert($factor);
                 $powerTokens = self::_getPowerTokens($token);
-                $powerIndexes = self::_savePowers($powerTokens, $factor);
+                $powerIndexes = self::savePowers($powerTokens, $factor);
                 self::_setFactorData($factor, $powerTokens, $powerIndexes);
                 break;
             case K::FACTOR_ENCLOSURE:
@@ -142,7 +196,7 @@ class Parser
      *
      * @return array
      */
-    private static function _saveTerms($tokens, $parent)
+    public static function saveTerms($tokens, $parent)
     {
         $indexes = [];
         foreach ($tokens as $token) {
@@ -153,7 +207,7 @@ class Parser
             case K::FACTOR:
                 $indexes[] = Sheet::insert($term);
                 $factorTokens = self::_getFactorTokens($token);
-                $factorIndexes = self::_saveFactors($factorTokens, $term);
+                $factorIndexes = self::saveFactors($factorTokens, $term);
                 self::_setTermData($term, $factorTokens, $factorIndexes);
                 break;
             case K::TERM_ENCLOSURE:
@@ -192,7 +246,7 @@ class Parser
         }
         $tokens = self::_getTermTokens($expStr);
         $obj->setTokens($tokens);
-        $termIndexes = self::_saveTerms($tokens, $obj);
+        $termIndexes = self::saveTerms($tokens, $obj);
         $obj->setTermIndexes($termIndexes);
     }
 
@@ -206,13 +260,15 @@ class Parser
     public static function analyze(string $expStr)
     {
         Sheet::clear();
-        $expObj = new \Calc\Symbol\Expression($expStr);
-        $expObj->setParentIndex(K::ROOT);
-        $expObj->setType(K::EXPRESSION);
-        $expObj->setIndex(K::ROOT);
-        self::_analyze($expObj);
+        $exp = new \Calc\Symbol\Expression($expStr);
+        $exp->setParentIndex(K::ROOT);
+        $exp->setType(K::EXPRESSION);
+        $exp->setIndex(K::ROOT);
+        Sheet::insert($exp);
+        Sheet::newStep();
+        self::_analyze($exp);
 
-        return $expObj;
+        return $exp;
     }
 
     /**

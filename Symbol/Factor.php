@@ -3,7 +3,7 @@
 /**
  * PHP version 7.x
  *
- * @category Math
+ * @category API
  * @package  Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  https://github.com/crownlessking/Calc/blob/master/LICENSE Apache-2.0
@@ -15,7 +15,7 @@ namespace Calc\Symbol;
 /**
  * Factor class.
  *
- * @category Math
+ * @category API
  * @package  Calc
  * @author   Riviere King <riviere@crownlessking.com>
  * @license  https://github.com/crownlessking/Calc/blob/master/LICENSE Apache-2.0
