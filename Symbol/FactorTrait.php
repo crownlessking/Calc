@@ -42,6 +42,8 @@ trait FactorTrait
      */
     protected $factorType;
 
+    protected $exponent;
+
     /**
      * Get the factor's type.
      * 
@@ -52,6 +54,19 @@ trait FactorTrait
         return $this->factorType;
     }
 
+    public function getExponent()
+    {
+        if (!isset($this->exponent)) {
+            $powerStart = strpos($this->expression);
+            if (!$powerStart) {
+                $this->exponent = '1';
+            } else {
+                $this->exponent = substr($this->expression, $powerStart);
+            }
+        }
+        return $this->exponent;
+    }
+    
     /**
      * Set the factor's type.
      *

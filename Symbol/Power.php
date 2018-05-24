@@ -24,6 +24,9 @@ namespace Calc\Symbol;
 class Power extends Symbol
 {
     use PowerTrait;
+    use \Calc\Math\Arithmetic\ArithmeticTrait;
+    use \Calc\Math\Arithmetic\PowerArithmeticTrait;
+    use \Calc\Math\Algebra\PowerAlgebraTrait;
 
     /**
      * Power Constructor.

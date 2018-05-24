@@ -120,7 +120,7 @@ trait TermParserTrait
      *
      * @return string
      */
-    private static function _identifyTerm(string $token)
+    private static function _identifyTerm($token)
     {
         foreach (RX::TERM_SYM_DEF as $type => $regex) {
             if (preg_match($regex, $token) === 1) {
@@ -140,7 +140,7 @@ trait TermParserTrait
      *
      * @return \Calc\Symbol\Term|\Calc\Symbol\TermEnclosure
      */
-    private static function _newTerm(string $token)
+    private static function _newTerm($token)
     {
         $type = self::_identifyTerm($token);
         switch ($type) {
@@ -263,7 +263,7 @@ trait TermParserTrait
      * Since the Term objects will be inserted in the "steps" array, the index
      * location of each object will be returned instead.
      *
-     * @param array  $token  string representing a term.
+     * @param string $token  string representing a term.
      * @param object $parent parent symbol object
      *
      * @see \Calc\Math\Sheet::$_sheet['steps']
@@ -275,10 +275,31 @@ trait TermParserTrait
         $term = self::_newTerm($token);
         $parentIndex = $parent->getIndex();
         $term->setParentIndex($parentIndex);
-        $index = Sheet::insert($term);
-        $term->setIndex($index);
+        Sheet::insert($term);
 
         return $term;
+    }
+
+    /**
+     * Converts a term token to an object.
+     *
+     * This method is similar to _saveTerm() except that the returned object
+     * is not saved into the step.
+     *
+     * @see _saveTerm()
+     *
+     * @param string $token  string representing a term
+     * @param Term   $parent parent object
+     *
+     * @return Term
+     */
+    private static function _getTerm($token, $parent)
+    {
+        $factor = self::_newTerm($token);
+        $parentIndex = $parent->getIndex();
+        $factor->setParentIndex($parentIndex);
+
+        return $factor;
     }
 
     /**
@@ -292,9 +313,8 @@ trait TermParserTrait
      *
      * @return void
      */
-    private static function _setTermData(& $term, array $tokens, array $factorIndexes)
+    private static function _setTermData(& $term, array $factorIndexes)
     {
-        $term->setTokens($tokens);
         $term->setFactorIndexes($factorIndexes);
         $signature = self::_getTermSignature($term);
         $term->setSignature($signature);
@@ -306,4 +326,43 @@ trait TermParserTrait
         $term->setLikeTermSignature($likeTermSignature);
     }
 
+    /**
+     * Merges term tokens as one.
+     *
+     * @param array $step array of symbol object or tokens
+     *
+     * @return string
+     */
+    private static function _mergeTermTokens(array $step)
+    {
+        $token = '';
+        foreach ($step as $obj) {
+            $t = self::_asStr($obj);
+            if (!empty($token)) {
+                $token .= (preg_match(RX::NEGATION_START, $t) === 1)
+                        ? $t
+                        : '+' . $t;
+            } else {
+                $token .= $t;
+            }
+        }
+        return $token;
+    }
+
+    /**
+     * Convert a symbol object to a Term.
+     *
+     * @param object $obj    symbol object
+     * @param object $parent parent symbol object
+     *
+     * @return object
+     */
+    private static function _toTerm($obj, $parent)
+    {
+        $token = (string) $obj;
+        $term = self::_getTerm($token, $parent);
+        $term->copy($obj);
+        
+        return $term;
+    }
 }

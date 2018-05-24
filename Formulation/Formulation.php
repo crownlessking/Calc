@@ -187,6 +187,11 @@ class Formulation
         return $trans;
     }
 
+    public static function gluePowers($strA, $strB)
+    {
+        return $strA . '^' . $strB;
+    }
+
     /**
      * Combine two terms using the right operator (+ or -).
      *
@@ -200,6 +205,56 @@ class Formulation
         $glue = (preg_match(\Calc\RX::NEGATION_START, $strB) === 1) ? '' : '+';
 
         return $strA . $glue . $strB;
+    }
+
+    /**
+     * Check if the symbol object meets the power requirement.
+     *
+     * @param object $obj  symbol object of class Power or PowerEnclosure.
+     * @param array  $rule array containing the rule definition
+     *
+     * @return boolean
+     */
+    private static function _powerOk($obj, $rule)
+    {
+        if (!isset($rule['restrict_power']) || empty($rule['restrict_power'])) {
+            return true;
+        }
+        $restrictPower = $rule['restrict_power'];
+        $j = 0;
+        do {
+            if ($obj->getPowerType() === $restrictPower[$j]) {
+                return true;
+            }
+            $j++;
+        } while ($j < count($restrictPower));
+
+        return false;
+    }
+
+    /**
+     * Check if the symbol object meets the factor requirement.
+     *
+     * @param object $obj  symbol object or class Factor or FactorEnclosure.
+     * @param array  $rule array containing the rule definition
+     *
+     * @return boolean
+     */
+    private static function _factorOk($obj, $rule)
+    {
+        if (!isset($rule['restrict_factor']) || empty($rule['restrict_factor'])) {
+            return true;
+        }
+        $restrictFactor = $rule['restrict_factor'];
+        $j = 0;
+        do {
+            if ($obj->getFactorType() === $restrictFactor[$j]) {
+                return true;
+            }
+            $j++;
+        } while ($j < count($restrictFactor));
+
+        return false;
     }
 
     /**
@@ -280,13 +335,15 @@ class Formulation
         $str = (string) $obj;
         for ($j = 0; $j < $count; $j++) {
             $rule = $array[$j];
-            if (Formulation::_restrictOk($obj, $rule)
+            if (self::_restrictOk($obj, $rule)
+                && self::_powerOk($obj, $rule)
+                && self::_factorOk($obj, $rule)
                 && preg_match($rule['regex'], $str) === 1
             ) {
                 if (isset($rule['equation'])) {
-                    return Formulation::rewrite($rule['equation'], $obj);
+                    return self::rewrite($rule['equation'], $obj);
                 } else if (isset($rule['callback'])) {
-                    return Formulation::_run($rule['callback'], $type, $obj);
+                    return self::_run($rule['callback'], $type, $obj);
                 }
                 $m = "Malformed formulation rule\n";
                 $m .= 'rule = ' . print_r($rule, true);
@@ -313,7 +370,7 @@ class Formulation
     public static function rewriteTerm($obj, $op = 'BEFORE_PARSE_DEFAULT')
     {
         $rules = constant("Calc\\Formulation\\TermRules::{$op}");
-        $rewrite = Formulation::_applyRule($rules, $obj, K::TERM);
+        $rewrite = self::_applyRule($rules, $obj, K::TERM);
 
         return $rewrite;
     }
@@ -334,7 +391,7 @@ class Formulation
         $exp = new Expression($opStr);
         $exp->setType(K::TERM_OPERATION);
         $rules = constant("Calc\\Formulation\\TermRules::{$op}");
-        $rewrite = Formulation::_applyRule($rules, $exp, K::TERM_OPERATION);
+        $rewrite = self::_applyRule($rules, $exp, K::TERM_OPERATION);
 
         return $rewrite;
     }
@@ -354,7 +411,7 @@ class Formulation
     public static function rewriteFactor($obj, $op = 'BEFORE_PARSE_DEFAULT')
     {
         $rules = constant("Calc\\Formulation\\FactorRules::{$op}");
-        $rewrite = Formulation::_applyRule($rules, $obj, K::FACTOR);
+        $rewrite = self::_applyRule($rules, $obj, K::FACTOR);
 
         return $rewrite;
     }
@@ -379,7 +436,7 @@ class Formulation
         $exp = new Expression($opStr);
         $exp->setType(K::FACTOR_OPERATION);
         $rules = constant("Calc\\Formulation\\FactorRules::{$op}");
-        $rewrite = Formulation::_applyRule($rules, $exp, K::FACTOR_OPERATION);
+        $rewrite = self::_applyRule($rules, $exp, K::FACTOR_OPERATION);
 
         return $rewrite;
     }
@@ -402,7 +459,7 @@ class Formulation
     public static function rewritePower($obj, $op = 'BEFORE_PARSE_DEFAULT')
     {
         $rules = constant("Calc\\Formulation\\PowerRules::{$op}");
-        $rewrite = Formulation::_applyRule($rules, $obj, K::POWER);
+        $rewrite = self::_applyRule($rules, $obj, K::POWER);
 
         return $rewrite;
     }
@@ -427,7 +484,7 @@ class Formulation
         $exp = new Expression($opStr);
         $exp->setType(K::POWER_OPERATION);
         $rules = constant("Calc\\Formulation\\PowerRules::{$op}");
-        $rewrite = Formulation::_applyRule($rules, $exp, K::POWER_OPERATION);
+        $rewrite = self::_applyRule($rules, $exp, K::POWER_OPERATION);
 
         return $rewrite;
     }

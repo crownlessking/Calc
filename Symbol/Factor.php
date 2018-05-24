@@ -23,10 +23,10 @@ namespace Calc\Symbol;
  */
 class Factor extends Symbol
 {
-
     use FactorTrait;
-    use \Calc\Math\Arithmetics\ArithmeticsCommonTrait;
-    use \Calc\Math\Arithmetics\ArithmeticsFactorTrait;
+    use \Calc\Math\Arithmetic\ArithmeticTrait;
+    use \Calc\Math\Arithmetic\FactorArithmeticTrait;
+    use \Calc\Math\Algebra\FactorAlgebraTrait;
 
     /**
      * Array of Power objects.

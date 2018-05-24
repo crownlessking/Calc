@@ -46,7 +46,7 @@ trait PowerParserTrait
             $c = $chars[$j];
             switch ($c) {
             case '^':
-                $tokens[] =  substr($factorStr, $start, $j - $start);
+                $tokens[] = substr($factorStr, $start, $j - $start);
                 $start = $j+1;
                 break;
             case '(':
@@ -74,17 +74,17 @@ trait PowerParserTrait
      * that can be computed. For example, if the expression is an integer,
      * it will be cast to an INT so it can be computed.
      *
-     * @param string $str string representing a mathematical expression
+     * @param string $token string representing a mathematical expression
      *
      * @return string
      */
-    private static function _identifyPower($str)
+    private static function _identifyPower($token)
     {
-        if (self::_isEnclosure($str)) {
+        if (self::_isEnclosure($token)) {
             return K::POWER_ENCLOSURE;
         }
         foreach (RX::POWER_SYM_DEF as $type => $regex) {
-            if (preg_match($regex, $str) === 1) {
+            if (preg_match($regex, $token) === 1) {
                 return K::DESC[$type];
             }
         }
@@ -94,19 +94,19 @@ trait PowerParserTrait
     /**
      * Get a new Power or Enclosure object.
      *
-     * @param string $str string representation of a base or power or both.
+     * @param string $token string representation of a base or power or both.
      *
      * @return \Calc\Symbol\Power|\Calc\Symbol\PowerEnclosure
      */
-    private static function _newPower($str)
+    private static function _newPower($token)
     {
-        $type = self::_identifyPower($str);
+        $type = self::_identifyPower($token);
         switch ($type) {
         case K::POWER_ENCLOSURE:
-            $power = new PowerEnclosure($str);
+            $power = new PowerEnclosure($token);
             break;
         default:
-            $power = new Power($str);
+            $power = new Power($token);
         }
         $power->setType($type);
         return $power;
@@ -137,8 +137,8 @@ trait PowerParserTrait
      *      the power type of "5" would be "base".
      *      the power type of "3" would be "exponent".
      *
-     * @param \Calc\Symbol\Power $power object representing a raise-to-power
-     *                                  operand.
+     * @param \Calc\Symbol\Power $power symbol object representing a
+     *                                  raise-to-power operand.
      * @param array              $order array of string tokens
      * @param integer            $total length of the array of indexes.
      *
@@ -174,6 +174,28 @@ trait PowerParserTrait
     }
 
     /**
+     * Converts power token to an object.
+     *
+     * This method is similar to _savePower() except that the returned object
+     * is not saved into the step.
+     *
+     * @see _savePower()
+     *
+     * @param string $token  string representing a power
+     * @param object $parent parent object
+     *
+     * @return Power
+     */
+    private static function _getPower($token, $parent)
+    {
+        $factor = self::_newPower($token);
+        $parentIndex = $parent->getIndex();
+        $factor->setParentIndex($parentIndex);
+
+        return $factor;
+    }
+
+    /**
      * Set inner values of power object.
      *
      * @param \Calc\Symbol\Power $power power object.
@@ -188,4 +210,49 @@ trait PowerParserTrait
         $power->setTag($tag);
     }
 
+    /**
+     * Merges power tokens as one.
+     *
+     * @param array $step array of symbol objects or tokens
+     *
+     * @return string
+     */
+    private static function _mergePowerTokens(array $step)
+    {
+        $token = '';
+        foreach ($step as $obj) {
+            $t = self::_asStr($obj);
+            if (preg_match(RX::NEGATION_START, $t) === 1) {
+                if (empty($token)) {
+                    $token .= $t;
+                } else {
+                    $token .= '^('. $t .')';
+                }
+            } else {
+                if (empty($token)) {
+                    $token .= $t;
+                } else {
+                    $token .= '^'. $t;
+                }
+            }
+        }
+        return $token;
+    }
+
+    /**
+     * Convert any symbol object to a Power.
+     *
+     * @param object $obj    symbol object
+     * @param object $parent parent symbol object
+     *
+     * @return object
+     */
+    private static function _toPower($obj, $parent)
+    {
+        $token = (string) $obj;
+        $power = self::_getPower($token, $parent);
+        $power->copy($obj);
+        
+        return $power;
+    }
 }

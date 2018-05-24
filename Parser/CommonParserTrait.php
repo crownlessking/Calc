@@ -131,4 +131,19 @@ trait CommonParserTrait
         $obj->setTag($tag);
     }
 
+    /**
+     * Simple method that ensures the return of a string value from the input
+     * parameter.
+     *
+     * [known usage]
+     * Merge tokens into one.
+     *
+     * @param mixed $obj object or string
+     *
+     * @return string
+     */
+    private static function _asStr($obj)
+    {
+        return (gettype($obj) === 'string') ? $obj : (string) $obj;
+    }
 }

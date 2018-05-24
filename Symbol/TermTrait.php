@@ -12,6 +12,8 @@
 
 namespace Calc\Symbol;
 
+use Calc\K;
+
 /**
  * Term trait.
  *
@@ -51,4 +53,5 @@ trait TermTrait
     {
         $this->likeTermSignature = $signature;
     }
+
 }

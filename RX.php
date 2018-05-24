@@ -30,15 +30,14 @@ class RX
     const DECIMAL  = '-?\d*\.\d+';
     const NUMBER   = '(('.RX::NATURAL.')|('.RX::INTEGER.')|('.RX::DECIMAL.'))';
     const VARIABLE = '-?[a-zA-Z]';
+    const DIVISION = '\/';
 
-    const ENCLOSURE = '-?((\['.RX::S.'\])|(\('.RX::S.'\)))';
     const OPERATORS = '[+*^\/-]';
 
     const ANY = '(('.RX::NATURAL.')|('.RX::INTEGER.')|('.RX::DECIMAL.')|('
-            .RX::VARIABLE.')|('.RX::ENCLOSURE.'))';
+            .RX::VARIABLE.'))';
 
-    const INT_DENOMINATOR = '\/'.RX::INTEGER;
-    const DENOMINATOR = '\/'.RX::ANY;
+    //const INT_DENOMINATOR = '\/'.RX::INTEGER;
 
     const INTEGER_FRACTION = RX::INTEGER.'\/'.RX::INTEGER;
     const VARIABLE_FRACTION = RX::VARIABLE.'\/'.RX::VARIABLE;
@@ -56,7 +55,7 @@ class RX
         'integer' => '~^'.RX::INTEGER.'$~',
         'decimal' => '~^'.RX::DECIMAL.'$~',
         'variable' => '~^'.RX::VARIABLE.'$~',
-        'fraction' => '~^\/~'
+        'fraction' => '~^'.RX::DIVISION.'~'
     ];
 
     const FACTOR_SYM_DEF = RX::TERM_SYM_DEF + [];

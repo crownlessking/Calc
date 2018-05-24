@@ -34,24 +34,24 @@ trait FactorParserTrait
     /**
      * Get an array of string factors.
      *
-     * @param string $str string representing a term.
+     * @param string $termStr string representing a term.
      *
      * @return array
      */
-    private static function _getFactorTokens($str)
+    private static function _getFactorTokens($termStr)
     {
-        $chars = str_split($str);
+        $chars = str_split($termStr);
         $tokens = [];
         $start = 0;
         for ($j = 0; $j < count($chars); $j++) {
             $c = $chars[$j];
             switch ($c) {
             case '*':
-                $tokens[] = substr($str, $start, $j - $start);
+                $tokens[] = substr($termStr, $start, $j - $start);
                 $start = $j + 1;
                 break;
             case '/':
-                $tokens[] = substr($str, $start, $j - $start);
+                $tokens[] = substr($termStr, $start, $j - $start);
                 $start = $j;
                 break;
             case '(':
@@ -63,7 +63,7 @@ trait FactorParserTrait
             }
         }
         if ($start < $j) {
-            $tokens[] = substr($str, $start, $j - $start);
+            $tokens[] = substr($termStr, $start, $j - $start);
         }
         return $tokens;
     }
@@ -78,18 +78,18 @@ trait FactorParserTrait
      * that can be computed. For example, if the expression is an integer,
      * it will be cast to an INT so it can be computed.
      *
-     * @param string $str string representing a mathematical expression
+     * @param string $token string representing a mathematical expression
      *
      * @return string
      */
-    private static function _identifyFactor(string $str)
+    private static function _identifyFactor($token)
     {
         foreach (RX::FACTOR_SYM_DEF as $type => $regex) {
-            if (preg_match($regex, $str) === 1) {
+            if (preg_match($regex, $token) === 1) {
                 return K::DESC[$type];
             }
         }
-        if (self::_isEnclosure($str)) {
+        if (self::_isEnclosure($token)) {
             return K::FACTOR_ENCLOSURE;
         }
         return K::POWER;
@@ -100,31 +100,31 @@ trait FactorParserTrait
      *
      * It returns a new factor object based on the type.
      *
-     * @param string $str  string  representing a factor
-     * @param int    $type integer representing the factor type
+     * @param string  $token string representing a factor
+     * @param integer $type  represents the factor type
      *
      * @return Factor
      */
-    private static function _getFactorObject(string $str, int $type)
+    private static function _getFactorObject($token, int $type)
     {
         switch ($type) {
         case K::FACTOR_ENCLOSURE:
-            $factor = new FactorEnclosure($str);
+            $factor = new FactorEnclosure($token);
             break;
         case K::FRACTION:
-            $fstr = substr($str, 1);
+            $fstr = substr($token, 1);
             $ft = self::_identifyFactor($fstr);
             switch ($ft) {
             case K::FACTOR_ENCLOSURE:
-                $factor = new FactorEnclosure($str);
+                $factor = new FactorEnclosure($token);
                 break;
             default:
-                $factor = new Factor($str);
+                $factor = new Factor($token);
             }
             $factor->setFactorType($ft);
             return $factor;
         default:
-            $factor = new Factor($str);
+            $factor = new Factor($token);
         }
         return $factor;
     }
@@ -132,14 +132,14 @@ trait FactorParserTrait
     /**
      * Get a new factor object.
      *
-     * @param string $str string representing a factor
+     * @param string $token string representing a factor
      *
      * @return \Calc\Symbol\Factor
      */
-    private static function _newFactor(string $str)
+    private static function _newFactor($token)
     {
-        $type = self::_identifyFactor($str);
-        $factor = self::_getFactorObject($str, $type);
+        $type = self::_identifyFactor($token);
+        $factor = self::_getFactorObject($token, $type);
         $factor->setType($type);
 
         return $factor;
@@ -181,8 +181,8 @@ trait FactorParserTrait
      *
      * The object is then returned.
      *
-     * @param array $token  string representing a factor.
-     * @param Term  $parent parent object.
+     * @param string $token  string representing a factor.
+     * @param Term   $parent parent object.
      *
      * @see \Calc\Math\Sheet
      *
@@ -193,9 +193,29 @@ trait FactorParserTrait
         $factor = self::_newFactor($token);
         $parentIndex = $parent->getIndex();
         $factor->setParentIndex($parentIndex);
-        $index = Sheet::insert($factor);
-        $factor->setIndex($index);
-        Sheet::update($factor);
+        Sheet::insert($factor);
+
+        return $factor;
+    }
+
+    /**
+     * Converts a factor token to an object.
+     *
+     * This method is similar to _saveFactor() except that the returned object
+     * is not saved into the step.
+     *
+     * @see _saveFactor()
+     *
+     * @param string $token  string representing a factor
+     * @param object $parent parent object
+     *
+     * @return Factor
+     */
+    private static function _getFactor($token, $parent)
+    {
+        $factor = self::_newFactor($token);
+        $parentIndex = $parent->getIndex();
+        $factor->setParentIndex($parentIndex);
 
         return $factor;
     }
@@ -209,9 +229,8 @@ trait FactorParserTrait
      *
      * @return void
      */
-    private static function _setFactorData(Factor &$factor, array $tokens, array $powerIndexes)
+    private static function _setFactorData(Factor &$factor, array $powerIndexes)
     {
-        $factor->setTokens($tokens);
         $factor->setPowerIndexes($powerIndexes);
         $signature = self::_getFactorSignature($factor);
         $factor->setSignature($signature);
@@ -219,4 +238,52 @@ trait FactorParserTrait
         $factor->setTag($tag);
     }
 
+    /**
+     * Merge factor tokens as one.
+     *
+     * @param array $step array of symbol object
+     *
+     * @return string
+     */
+    private static function _mergeFactorTokens(array $step)
+    {
+        $token = '';
+        foreach ($step as $obj) {
+            $t = self::_asStr($obj);
+            $type = preg_match(RX::FACTOR_SYM_DEF['fraction'], $t)
+                    ? K::FRACTION
+                    : K::FACTOR ;
+            if (!empty($token)) {
+                if ($type === K::FRACTION) {
+                    $token .= $t;
+                } else {
+                    $token .= '*' . $t;
+                }
+            } else {
+                if ($type === K::FRACTION) {
+                    $token .= '1' . $t;
+                } else {
+                    $token = $t;
+                }
+            }
+        }
+        return $token;
+    }
+
+    /**
+     * Convert any symbol object to a Factor.
+     *
+     * @param object $obj    symbol object
+     * @param object $parent parent symbol object
+     *
+     * @return object
+     */
+    private static function _toFactor($obj, $parent)
+    {
+        $token = (string) $obj;
+        $factor = self::_getFactor($token, $parent);
+        $factor->copy($obj);
+
+        return $factor;
+    }
 }

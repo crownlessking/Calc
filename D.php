@@ -42,7 +42,8 @@ class D
             'type'      => K::getDesc($obj->getType()),
             'tag'       => $obj->getTag(),
             'signature' => $obj->getSignature(),
-            'like-term_signature' => $obj->getLikeTermSignature()
+            'like-term_signature' => $obj->getLikeTermSignature(),
+            'index' => $obj->getIndex()
         ];
     }
 
@@ -64,7 +65,8 @@ class D
             'type'        => K::getDesc($obj->getType()),
             'factor_type' => K::getDesc($obj->getFactorType()),
             'tag'         => $obj->getTag(),
-            'signature'   => $obj->getSignature()
+            'signature'   => $obj->getSignature(),
+            'index'       => $obj->getIndex()
         ];
     }
 
@@ -86,7 +88,8 @@ class D
             'type'       => K::getDesc($obj->getType()),
             'power_type' => K::getDesc($obj->getPowerType()),
             'tag'        => $obj->getTag(),
-            'signature'  => $obj->getSignature()
+            'signature'  => $obj->getSignature(),
+            'index'      => $obj->getIndex()
         ];
     }
 
@@ -198,4 +201,9 @@ class DebuggingException extends \Exception
     {
         return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
     }
+}
+
+class NotImplementedException extends \BadMethodCallException
+{
+
 }

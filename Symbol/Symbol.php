@@ -145,7 +145,7 @@ abstract class Symbol
      */
     public function getTokens()
     {
-        if ($this->tokens) {
+        if (isset($this->tokens)) {
             return $this->tokens;
         }
         $m = "the \"tokens\" for object \"{$this->expression}\" is not set yet.";
@@ -159,7 +159,7 @@ abstract class Symbol
      */
     public function getParentIndex()
     {
-        if ($this->parentIndex) {
+        if (isset($this->parentIndex)) {
             return $this->parentIndex;
         }
         $m = "the \"parent's index\" for object \"{$this->expression}\" is not set yet.";
@@ -241,10 +241,10 @@ abstract class Symbol
      */
     public function getSignature()
     {
-        if ($this->signature) {
+        if (isset($this->signature)) {
             return $this->signature;
         }
-        $m = "the \"signature\" for object \"{$this->expression}\" is not set yet.";
+        $m = "the \"signature\" for object \"{$this->expression}\" is not set.";
         throw new \LogicException($m);
     }
 
@@ -376,6 +376,21 @@ abstract class Symbol
     }
 
     /**
+     * Copy parameter object values.
+     *
+     * @param object $obj symbol object
+     *
+     * @return void
+     */
+    public function copy($obj)
+    {
+        $this->index         = $obj->index;
+        $this->tag           = $obj->tag;
+        $this->signature     = $obj->signature;
+        $this->simplifiedExp = $obj->simplifiedExp;
+    }
+
+    /**
      * Handle Symbol objects casting to string.
      *
      * @return string
@@ -388,16 +403,17 @@ abstract class Symbol
     /**
      * Symbol constructor
      *
-     * @param string $exp expression
+     * @param string $token expression
      *
      * @return void
      */
-    function __construct(string $exp)
+    function __construct($token)
     {
-        $this->expression = $exp;
-        $this->isNegative = (preg_match(RX::NEGATION_START, $exp) === 1)
+        $this->expression = $token;
+        $this->isNegative = (preg_match(RX::NEGATION_START, $token) === 1)
                 ? true
                 : false;
+        $this->status = K::DEFAULT_;
     }
 
 }

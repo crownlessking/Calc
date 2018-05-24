@@ -48,13 +48,23 @@ class Enclosure extends Expression
     protected $enclosureType;
 
     /**
+     * Get the type of enclosure, whether parentheses or brackets.
+     *
+     * @return integer
+     */
+    public function getEnclosureType()
+    {
+        return $this->enclosureType;
+    }
+
+    /**
      * Get enclosure type.
      *
      * E.g. whether "parentheses" or "brackets"
      *
      * @return integer
      */
-    protected function getEnclosureType()
+    protected function setEnclosureType()
     {
         if (preg_match(RX::PARENTHESES_START, $this->expression) === 1) {
             return K::PARENTHESES;
@@ -122,7 +132,7 @@ class Enclosure extends Expression
     function __construct(string $exp)
     {
         parent::__construct($exp);
-        $this->enclosureType = $this->getEnclosureType();
+        $this->enclosureType = $this->setEnclosureType();
     }
 
 }

@@ -26,8 +26,9 @@ use Calc\K;
 class Term extends Symbol
 {
     use TermTrait;
-    use \Calc\Math\Arithmetics\ArithmeticsCommonTrait;
-    use \Calc\Math\Arithmetics\ArithmeticsTermTrait;
+    use \Calc\Math\Arithmetic\ArithmeticTrait;
+    use \Calc\Math\Arithmetic\TermArithmeticTrait;
+    use \Calc\Math\Algebra\TermAlgebraTrait;
 
     protected $factorIndexes;
 

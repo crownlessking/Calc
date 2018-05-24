@@ -27,7 +27,6 @@ class K
     const ROOT = -4;
 
     const FAILED = -3;
-    const UNDETERMINED = -2;
     const NONE = -1;
     const SUCCESS = 0;
 
@@ -37,11 +36,6 @@ class K
      * The element can not or can no longer be modified.
      */
     const FINAL_ = 2;
-
-    /**
-     * The element is available for evaluation.
-     */
-    const COMPUTE = 3;
 
     /**
      * The element is
@@ -64,9 +58,17 @@ class K
     const BRACKETS    = 8;
 
     const LIKE_TERM = 9;
-    const TERM_OPERATION = 10;
-    const FACTOR_OPERATION = 11;
-    const POWER_OPERATION = 12;
+
+    /** additions and subtractions */
+    const TERM_OPERATION = 11;
+
+    /** multiplications and divisions */
+    const FACTOR_OPERATION = 12;
+
+    /** raising to power */
+    const POWER_OPERATION = 13;
+
+    /* ====================================================================== */
 
     const CONSTANT = 100;
     const NATURAL = 101;
@@ -90,35 +92,44 @@ class K
     const TERM_ENCLOSURE = 118;
 
     /**
-     * Description to values.
+     * Description of values.
      *
      * @var array
      */
     const DESC = [
-        'failed' => K::FAILED,
-        'undetermined' => K::UNDETERMINED,
-        'none' => K::NONE,
-        'success' => K::SUCCESS,
-        'like_term' => K::LIKE_TERM,
-        'constant' => K::CONSTANT,
-        'natural'  => K::NATURAL,
-        'integer'  => K::INTEGER,
-        'decimal'  => K::DECIMAL,
-        'variable' => K::VARIABLE,
-        'term' => K::TERM,
-        'factor' => K::FACTOR,
-        'power' => K::POWER,
-        //'enclosure' => K::ENCLOSURE,
-        'expression' => K::EXPRESSION,
-        'fraction' => K::FRACTION,
-        'unknown' => K::UNKNOWN,
-        'base' => K::BASE,
-        'b&e' => K::B_AND_E,
-        'exponent' => K::EXPONENT,
-        'denominator' => K::DENOMINATOR,
-        'term_enclosure' => K::TERM_ENCLOSURE,
+        'root'             => K::ROOT,
+        'failed'           => K::FAILED,
+        'none'             => K::NONE,
+        'success'          => K::SUCCESS,
+        'default'          => K::DEFAULT_,
+        'final'            => K::FINAL_,
+        'in_progress'      => K::IN_PROCESS,
+        'selected'         => K::SELECTED,
+        'parentheses'      => K::PARENTHESES,
+        'brackets'         => K::BRACKETS,
+        'like_term'        => K::LIKE_TERM,
+        'term_operation'   => K::TERM_OPERATION,
+        'factor_operation' => K::FACTOR_OPERATION,
+        'power_operation'  => K::POWER_OPERATION,
+        'constant'         => K::CONSTANT,
+        'natural'          => K::NATURAL,
+        'integer'          => K::INTEGER,
+        'decimal'          => K::DECIMAL,
+        'variable'         => K::VARIABLE,
+        'term'             => K::TERM,
+        'factor'           => K::FACTOR,
+        'power'            => K::POWER,
+        'enclosure'        => K::ENCLOSURE,
+        'expression'       => K::EXPRESSION,
+        'fraction'         => K::FRACTION,
+        'unknown'          => K::UNKNOWN,
+        'base'             => K::BASE,
+        'b&e'              => K::B_AND_E,
+        'exponent'         => K::EXPONENT,
+        'denominator'      => K::DENOMINATOR,
+        'term_enclosure'   => K::TERM_ENCLOSURE,
         'factor_enclosure' => K::FACTOR_ENCLOSURE,
-        'power_enclosure' => K::POWER_ENCLOSURE
+        'power_enclosure'  => K::POWER_ENCLOSURE
     ];
 
     /**
@@ -128,21 +139,13 @@ class K
      *
      * @return string
      */
-    public static function _getDesc($constant)
+    public static function getDesc($constant)
     {
         $flipped = array_flip(K::DESC);
         if (isset($flipped[$constant])) {
             return $flipped[$constant];
         }
         return "n/a($constant)";
-    }
-
-    public static function getDesc($constant)
-    {
-        $class = new \ReflectionClass(__CLASS__);
-        $ks = array_flip($class->getConstants());
-
-        return $ks[$constant];
     }
 
     /**
@@ -242,31 +245,36 @@ class K
     /**
      * Get class constant.
      *
+     * Accepts symbol objects only.
+     *
      * @param object $obj Symbol object.
      *
      * @return integer
      */
     public static function getClass($obj)
     {
-        $class = get_class($obj);
-        switch ($class) {
-        case 'Calc\\Symbol\\Expression':
-            return K::EXPRESSION;
-        //case 'Calc\\Symbol\\Enclosure':
-        //    return K::ENCLOSURE;
-        case 'Calc\\Symbol\\TermEnclosure':
-            return K::TERM_ENCLOSURE;
-        case 'Calc\\Symbol\\Term':
-            return K::TERM;
-        case 'Calc\\Symbol\\FactorEnclosure':
-            return K::FACTOR_ENCLOSURE;
-        case 'Calc\\Symbol\\Factor':
-            return K::FACTOR;
-        case 'Calc\\Symbol\\PowerEnclosure':
-            return K::POWER_ENCLOSURE;
-        case 'Calc\\Symbol\\Power':
-            return K::POWER;
+        if (gettype($obj) === 'object') {
+            $class = get_class($obj);
+            switch ($class) {
+            case 'Calc\\Symbol\\Expression':
+                return K::EXPRESSION;
+            //case 'Calc\\Symbol\\Enclosure':
+            //    return K::ENCLOSURE;
+            case 'Calc\\Symbol\\TermEnclosure':
+                return K::TERM_ENCLOSURE;
+            case 'Calc\\Symbol\\Term':
+                return K::TERM;
+            case 'Calc\\Symbol\\FactorEnclosure':
+                return K::FACTOR_ENCLOSURE;
+            case 'Calc\\Symbol\\Factor':
+                return K::FACTOR;
+            case 'Calc\\Symbol\\PowerEnclosure':
+                return K::POWER_ENCLOSURE;
+            case 'Calc\\Symbol\\Power':
+                return K::POWER;
+            }
         }
+        return false;
     }
 
     /**
@@ -297,6 +305,28 @@ class K
         }
         // we have identical indexes, and no unequal values
         return true;
+    }
+
+    /**
+     * Tests argument to know if its a Symbol object or not.
+     *
+     * @param mixed $arg arbitrary value
+     *
+     * @return boolean
+     */
+    public static function isSymbol($arg)
+    {
+        switch (self::getClass($arg)) {
+        case K::EXPRESSION:
+        case K::POWER_ENCLOSURE:
+        case K::FACTOR_ENCLOSURE:
+        case K::TERM_ENCLOSURE:
+        case K::POWER:
+        case K::FACTOR:
+        case K::TERM:
+            return true;
+        }
+        return false;
     }
 
 }

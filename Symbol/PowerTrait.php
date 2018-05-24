@@ -23,7 +23,6 @@ namespace Calc\Symbol;
  */
 trait PowerTrait
 {
-
     /**
      * This a a type that is specific to the Power object.
      *

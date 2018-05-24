@@ -15,6 +15,7 @@ namespace Calc;
 
 use Calc\Parser\Parser;
 use Calc\Math\Sheet;
+use Calc\Math\Math;
 
 /**
  * Calc class.
@@ -162,15 +163,24 @@ class Calc
         self::_initialize($expression);
         $exp = Parser::analyze(self::$_expression);
         $data = Parser::getAnalysisData();
-        $stepIndex = Sheet::getLastStepIndex();
+        $step_id = Sheet::getCurrentStepId();
         return [
-            "expression" => self::$_expression,
-            "objects"    => D::getAnalysisDump($data['steps'], $stepIndex),
-            "tags" => $data["tags"],
-            "tags_by_signature" => $data["tags_by_signature"],
-            "next_tag" => Sheet::getNextTagIndex(),
-            'simplified_exp' => $exp->getSimplifiedExp()
+            'expression'        => self::$_expression,
+            'objects'           => D::getAnalysisDump($data['steps'], $step_id),
+            'tags'              => $data["tags"],
+            'tags_by_signature' => $data["tags_by_signature"],
+            'next_tag'          => Sheet::getNextTagIndex(),
+            'simplified_exp'    => $exp->getSimplifiedExp()
         ];
+    }
+
+    public static function simplify($expStr)
+    {
+        self::_initialize($expStr);
+        Math::calculate(self::$_expression);
+        $data = Sheet::getSheet();
+
+        return $data;
     }
 
 }

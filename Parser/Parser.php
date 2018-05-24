@@ -39,13 +39,14 @@ class Parser
      *
      * E.g. "5^3" breaks into ["5","3"]
      *
-     * @param string $factorStr string representing a factor
+     * @param string $arg string or symbol object
      *
      * @return array
      */
-    public static function getPowerTokens($factorStr)
+    public static function getPowerTokens($arg)
     {
-        $array = self::_getPowerTokens($factorStr);
+        $str = K::isSymbol($arg) ? (string) $arg : $arg;
+        $array = self::_getPowerTokens($str);
 
         return $array;
     }
@@ -57,13 +58,14 @@ class Parser
      *
      * E.g. "5*3" breaks into ["5","3"]
      *
-     * @param string $termStr string representing a term
+     * @param string $arg string or symbol object
      *
      * @return array
      */
-    public static function getFactorTokens($termStr)
+    public static function getFactorTokens($arg)
     {
-        $array = self::_getFactorTokens($termStr);
+        $str = K::isSymbol($arg) ? (string) $arg : $arg;
+        $array = self::_getFactorTokens($str);
 
         return $array;
     }
@@ -75,13 +77,14 @@ class Parser
      *
      * e.g. "5+3" breaks into ["5","3"]
      *
-     * @param string $expStr string representing an expression
+     * @param string $arg string or symbol object
      *
      * @return array
      */
-    public static function getTermTokens($expStr)
+    public static function getTermTokens($arg)
     {
-        $array = self::_getTermTokens($expStr);
+        $str = K::isSymbol($arg) ? (string) $arg : $arg;
+        $array = self::_getTermTokens($str);
 
         return $array;
     }
@@ -90,9 +93,9 @@ class Parser
      * Get symbol object's real type always.
      *
      * An object can have two types, if its primary type is "fraction".
-     * 
+     *
      * e.g. 1/5
-     * 
+     *
      * In this case, "1" is a "natural" and "/5" is the "fraction" but it is also
      * a "natural" because of the "5".
      * To retrieve the type "natural" for the "5", the Factor::getFactorType()
@@ -109,6 +112,52 @@ class Parser
         return ($obj->getType() !== K::FRACTION)
                 ? $obj->getType()
                 : $obj->getFactorType();
+    }
+
+    /**
+     * Converts a token to a Power object.
+     *
+     * @param string $token represents a base or exponent
+     * @param object $parent parent object, most likely a factor
+     *
+     * @return object
+     */
+    public static function getPower($token, $parent)
+    {
+        $obj = self::_getPower($token, $parent);
+
+        return $obj;
+    }
+
+    /**
+     * Converts a token to a Factor object.
+     *
+     * @param string $token  string representing a factor
+     * @param object $parent parent object, most likely a Term
+     *
+     * @return object
+     */
+    public static function getFactor($token, $parent)
+    {
+        $obj = self::_getFactor($token, $parent);
+
+        return $obj;
+    }
+
+    /**
+     * Converts a token to a Term object.
+     *
+     * @param string $token  string representing a term
+     * @param object $parent parent object. It could be an Expression or any
+     *                       class that inherit from it.
+     *
+     * @return object
+     */
+    public static function getTerm($token, $parent)
+    {
+        $obj = self::_getTerm($token, $parent);
+
+        return $obj;
     }
 
     /**
@@ -169,7 +218,7 @@ class Parser
                 $indexes[] = Sheet::insert($factor);
                 $powerTokens = self::_getPowerTokens($token);
                 $powerIndexes = self::savePowers($powerTokens, $factor);
-                self::_setFactorData($factor, $powerTokens, $powerIndexes);
+                self::_setFactorData($factor, $powerIndexes);
                 break;
             case K::FACTOR_ENCLOSURE:
                 $indexes[] = Sheet::insert($factor);
@@ -177,7 +226,7 @@ class Parser
                 self::_setEnclosureData($factor);
                 break;
             default:
-                self::_setFactorData($factor, [], []);
+                self::_setFactorData($factor, []);
                 $indexes[] = Sheet::insert($factor);
             }
             Sheet::poolTag($factor);
@@ -208,7 +257,7 @@ class Parser
                 $indexes[] = Sheet::insert($term);
                 $factorTokens = self::_getFactorTokens($token);
                 $factorIndexes = self::saveFactors($factorTokens, $term);
-                self::_setTermData($term, $factorTokens, $factorIndexes);
+                self::_setTermData($term, $factorIndexes);
                 break;
             case K::TERM_ENCLOSURE:
                 $indexes[] = Sheet::insert($term);
@@ -216,7 +265,7 @@ class Parser
                 self::_setEnclosureData($term);
                 break;
             default:
-                self::_setTermData($term, [], []);
+                self::_setTermData($term, []);
                 $indexes[] = Sheet::insert($term);
             }
             Sheet::poolTag($term);
@@ -263,9 +312,8 @@ class Parser
         $exp = new \Calc\Symbol\Expression($expStr);
         $exp->setParentIndex(K::ROOT);
         $exp->setType(K::EXPRESSION);
-        $exp->setIndex(K::ROOT);
         Sheet::insert($exp);
-        Sheet::newStep();
+        Sheet::nextStep();
         self::_analyze($exp);
 
         return $exp;
@@ -282,6 +330,48 @@ class Parser
     public static function getAnalysisData()
     {
         return Sheet::getAnalysisData();
+    }
+
+    /**
+     * Merge a list of Power objects into a single token.
+     *
+     * @param array $step array of symbol object
+     *
+     * @return string
+     */
+    public static function implodePowers(array $step)
+    {
+        $token = self::_mergePowerTokens($step);
+
+        return $token;
+    }
+
+    /**
+     * Merge a list of Factor objects into a single token.
+     *
+     * @param array $step array of symbol object
+     *
+     * @return string
+     */
+    public static function implodeFactors(array $step)
+    {
+        $token = self::_mergeFactorTokens($step);
+
+        return $token;
+    }
+
+    /**
+     * Merge a list of Term objects into a single token.
+     *
+     * @param array $step array of symbol object
+     *
+     * @return string
+     */
+    public static function implodeTerms(array $step)
+    {
+        $token = self::_mergeTermTokens($step);
+
+        return $token;
     }
 
 }
